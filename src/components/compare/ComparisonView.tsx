@@ -79,9 +79,7 @@ export function ComparisonView() {
             <p>
               Evidence = accepted / all draws; BF = ratio of evidences, 95% CI from binomial Monte Carlo error on log BF. Posterior with equal
               prior odds on the three pathogens.
-            </p>
-            <p className={styles.muted}>Source: final_paper/plot1/plot_peak_density.ipynb</p>
-          </div>
+            </p>          </div>
         </div>
         <div className={styles.winReadout}>
           <span className="eyebrow">Acceptance window</span>
