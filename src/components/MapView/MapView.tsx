@@ -41,6 +41,13 @@ export function MapView() {
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [provinces, setProvinces] = useState<FeatureCollection | null>(null);
   const [showProvinces, setShowProvinces] = useState(true);
+  // Text atlases are rasterised once: wait for Inter so labels don't fall back to Arial.
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => {
+    Promise.all(['500 64px Inter', '600 64px Inter'].map((f) => document.fonts.load(f)))
+      .catch(() => undefined)
+      .then(() => setFontsReady(true));
+  }, []);
 
   const land = useMemo(() => {
     const topo = landTopo as unknown as Topology;
@@ -83,6 +90,7 @@ export function MapView() {
     selected,
     showProvinces,
     previewPath,
+    fontsReady,
   });
 
   return (
@@ -98,6 +106,8 @@ export function MapView() {
           controller={{ doubleClickZoom: true, inertia: 250 }}
           layers={layers}
           pickingRadius={6}
+          // crisp on HiDPI/Retina screens (deck's default was not taking effect)
+          useDevicePixels={Math.min(window.devicePixelRatio || 1, 2)}
           getCursor={({ isHovering, isDragging }) => (isDragging ? 'grabbing' : isHovering ? 'pointer' : 'default')}
           onHover={(info) => {
             const i = info.layer?.id === 'nodes' && info.object ? (info.object as { idx: number }).idx : null;

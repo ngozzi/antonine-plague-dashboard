@@ -28,9 +28,22 @@ export interface LayerCtx {
   selected: number | null;
   showProvinces: boolean;
   previewPath: number[] | null;
+  fontsReady?: boolean;
 }
 
 const dashExt = new PathStyleExtension({ dash: true });
+
+/**
+ * Shared label style: a high-resolution SDF atlas with a large radius, so the
+ * halo is a thin smooth ring instead of a blocky box, drawn in Inter.
+ */
+const TEXT = {
+  fontFamily: 'Inter, system-ui, sans-serif',
+  fontSettings: { sdf: true, fontSize: 96, buffer: 12, radius: 24, smoothing: 0.15 },
+  outlineWidth: 5, // in atlas px (÷ radius): ≈ 2 screen px at 12px text
+  outlineColor: [247, 244, 238, 235] as RGBA,
+  characterSet: 'auto' as const,
+};
 
 // Stable per-network edge subsets (new arrays each frame would force deck.gl
 // to recompute every attribute).
@@ -85,7 +98,7 @@ export function buildLayers(ctx: LayerCtx): Layer[] {
       }),
     );
   // Province names once zoomed in enough to read them.
-  if (ctx.provinces && ctx.showProvinces && zoom >= 4.8)
+  if (ctx.fontsReady && ctx.provinces && ctx.showProvinces && zoom >= 4.8)
     layers.push(
       new TextLayer<ProvinceLabel>({
         id: 'province-labels',
@@ -94,12 +107,8 @@ export function buildLayers(ctx: LayerCtx): Layer[] {
         getText: (d) => d.name.replace('Italia · ', '').toUpperCase(),
         getSize: 10.5,
         getColor: [...C.province, 255],
-        fontFamily: 'Inter, system-ui, sans-serif',
+        ...TEXT,
         fontWeight: 600,
-        fontSettings: { sdf: true, fontSize: 64, buffer: 6 },
-        outlineWidth: 3,
-        outlineColor: [247, 244, 238, 200],
-        characterSet: 'auto',
       }),
     );
 
@@ -348,7 +357,7 @@ function withNodes(layers: Layer[], ctx: LayerCtx, dtOf: (i: number) => number, 
     nodes,
     ctx.zoom,
   );
-  if (pathNamed.length)
+  if (ctx.fontsReady && pathNamed.length)
     layers.push(
       new TextLayer<number>({
         id: 'path-labels',
@@ -360,12 +369,8 @@ function withNodes(layers: Layer[], ctx: LayerCtx, dtOf: (i: number) => number, 
         getPixelOffset: (i) => [radiusOf(nodes[i]) * zScale + 6, 0],
         getTextAnchor: 'start',
         getAlignmentBaseline: 'center',
-        fontFamily: 'Inter, system-ui, sans-serif',
+        ...TEXT,
         fontWeight: 600,
-        fontSettings: { sdf: true, fontSize: 64, buffer: 6 },
-        outlineWidth: 4,
-        outlineColor: [247, 244, 238, 240],
-        characterSet: 'auto',
         updateTriggers: { getPixelOffset: zScale },
       }),
     );
@@ -376,26 +381,23 @@ function withNodes(layers: Layer[], ctx: LayerCtx, dtOf: (i: number) => number, 
   const lk = String(minPop);
   if (!cache.has(lk)) cache.set(lk, nodes.filter((n) => n.key || n.pop >= minPop));
   const labelled = cache.get(lk)!;
-  layers.push(
-    new TextLayer<OrbisNode>({
-      id: 'labels',
-      data: labelled,
-      getPosition: (n) => [n.lon, n.lat],
-      getText: (n) => n.key ?? n.name,
-      getSize: (n) => (n.key ? 13 : 11.5),
-      getColor: (n) => (n.key ? [...C.ink, 235] : [70, 70, 70, 210]),
-      getPixelOffset: (n) => [radiusOf(n) * zScale + 6, 0],
-      getTextAnchor: 'start',
-      getAlignmentBaseline: 'center',
-      fontFamily: 'Inter, system-ui, sans-serif',
-      fontWeight: 500,
-      fontSettings: { sdf: true, fontSize: 64, buffer: 6 },
-      outlineWidth: 4,
-      outlineColor: [247, 244, 238, 230],
-      characterSet: 'auto',
-      updateTriggers: { getPixelOffset: zScale },
-    }),
-  );
+  if (ctx.fontsReady)
+    layers.push(
+      new TextLayer<OrbisNode>({
+        id: 'labels',
+        data: labelled,
+        getPosition: (n) => [n.lon, n.lat],
+        getText: (n) => n.key ?? n.name,
+        getSize: (n) => (n.key ? 13 : 11.5),
+        getColor: (n) => (n.key ? [...C.ink, 235] : [70, 70, 70, 210]),
+        getPixelOffset: (n) => [radiusOf(n) * zScale + 6, 0],
+        getTextAnchor: 'start',
+        getAlignmentBaseline: 'center',
+        ...TEXT,
+        fontWeight: 500,
+        updateTriggers: { getPixelOffset: zScale },
+      }),
+    );
   return layers;
 }
 
