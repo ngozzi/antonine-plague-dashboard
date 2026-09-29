@@ -26,7 +26,6 @@ Conventions (from the engine):
 from __future__ import annotations
 
 import json
-import shutil
 from pathlib import Path
 
 import numpy as np
@@ -87,6 +86,14 @@ KEY_PLACES = {
 }
 
 
+ROMAN = {"I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"}
+
+
+def province_name(name: str) -> str:
+    """Italy is split into the Augustan regions, named only by numeral."""
+    return f"Italia · Regio {name}" if name in ROMAN else name
+
+
 def p(key: str, tag: str | None = None) -> Path:
     return Path(str(SOURCES[key]).format(tag=tag))
 
@@ -125,7 +132,7 @@ def build_network(meta_nodes: list[dict]) -> dict:
             "idx": n["idx"], "id": int(n["id"]), "name": label,
             "lon": round(float(row["x"]), 4), "lat": round(float(row["y"]), 4),
             "pop": int(n["pop"]), "rank": int(row["rank"]), "degree": int(degree[n["idx"]]),
-            "province": str(row["province"]), "region": str(row["macro_regione"]),
+            "province": province_name(str(row["province"])), "region": str(row["macro_regione"]),
             **({"key": KEY_PLACES[label]} if label in KEY_PLACES else {}),
         })
     # Unnamed ORBIS junctions ("x"): name them after the nearest named place.
@@ -347,7 +354,10 @@ def main() -> None:
     (OUT / "comparison.json").write_text(json.dumps(build_comparison(abc_meta), separators=(",", ":")))
 
     if p("provinces").exists():
-        shutil.copy(p("provinces"), OUT / "provinces.geojson")
+        gj = json.loads(p("provinces").read_text())
+        for f in gj["features"]:
+            f["properties"]["name"] = province_name(str(f["properties"].get("name", "")))
+        (OUT / "provinces.geojson").write_text(json.dumps(gj, separators=(",", ":")))
     print(f"done → {OUT}")
 
 

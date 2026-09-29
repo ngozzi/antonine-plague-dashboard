@@ -74,10 +74,32 @@ export function buildLayers(ctx: LayerCtx): Layer[] {
       new GeoJsonLayer({
         id: 'provinces',
         data: ctx.provinces,
-        filled: false,
+        // Empire as a faint warm tint (outside land stays plain) + thin
+        // solid internal borders; no dashes, so coasts don't look doubled.
+        filled: true,
+        getFillColor: [...C.province, 26],
         stroked: true,
-        getLineColor: [...C.province, 150],
-        lineWidthMinPixels: 0.5,
+        getLineColor: [...C.province, 120],
+        getLineWidth: 0.8,
+        lineWidthUnits: 'pixels',
+      }),
+    );
+  // Province names once zoomed in enough to read them.
+  if (ctx.provinces && ctx.showProvinces && zoom >= 4.8)
+    layers.push(
+      new TextLayer<ProvinceLabel>({
+        id: 'province-labels',
+        data: provinceLabels(ctx.provinces),
+        getPosition: (d) => d.pos,
+        getText: (d) => d.name.replace('Italia · ', '').toUpperCase(),
+        getSize: 10.5,
+        getColor: [...C.province, 255],
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontWeight: 600,
+        fontSettings: { sdf: true, fontSize: 64, buffer: 6 },
+        outlineWidth: 3,
+        outlineColor: [247, 244, 238, 200],
+        characterSet: 'auto',
       }),
     );
 
@@ -400,5 +422,38 @@ function declutter(candidates: number[], fixed: OrbisNode[], nodes: OrbisNode[],
       out.push(i);
     }
   }
+  return out;
+}
+
+interface ProvinceLabel {
+  name: string;
+  pos: [number, number];
+}
+
+const provinceLabelCache = new WeakMap<FeatureCollection, ProvinceLabel[]>();
+
+/** One label per province, at the vertex centroid of its largest polygon. */
+function provinceLabels(fc: FeatureCollection): ProvinceLabel[] {
+  let out = provinceLabelCache.get(fc);
+  if (out) return out;
+  out = [];
+  for (const f of fc.features) {
+    const g = f.geometry;
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+    let best: number[][] | null = null;
+    let bestArea = -1;
+    for (const p of polys) {
+      const ring = p[0];
+      const xs = ring.map((c) => c[0]);
+      const ys = ring.map((c) => c[1]);
+      const area = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
+      if (area > bestArea) { bestArea = area; best = ring; }
+    }
+    const name = String(f.properties?.name ?? '');
+    if (!best || !name) continue;
+    const n = best.length;
+    out.push({ name, pos: [best.reduce((s, c) => s + c[0], 0) / n, best.reduce((s, c) => s + c[1], 0) / n] });
+  }
+  provinceLabelCache.set(fc, out);
   return out;
 }

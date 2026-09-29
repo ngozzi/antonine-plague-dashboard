@@ -9,7 +9,7 @@ export const C = {
   bg: [247, 244, 238] as RGB,
   sea: [228, 233, 235] as RGB,
   land: [247, 244, 238] as RGB,
-  province: [214, 206, 190] as RGB,
+  province: [168, 150, 120] as RGB, // warm taupe: visible on land, below the network
   ink: [26, 26, 26] as RGB,
   neutral: [104, 120, 140] as RGB, // susceptible node: desaturated blue-gray
   link: [120, 134, 150] as RGB,
