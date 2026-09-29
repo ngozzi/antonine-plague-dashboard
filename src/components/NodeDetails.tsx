@@ -15,6 +15,7 @@ import styles from './NodeCard.module.css';
 export function NodeDetails({ idx, onClose }: { idx: number; onClose: () => void }) {
   const network = useStore((s) => s.network)!;
   const derived = useStore((s) => s.derived);
+  const run = useStore((s) => s.run);
   const distances = useStore((s) => s.distances);
   const t = useStore((s) => s.t);
   const scenario = useStore(scenarioOf);
@@ -23,7 +24,7 @@ export function NodeDetails({ idx, onClose }: { idx: number; onClose: () => void
   const n = network.nodes[idx];
 
   const path = useMemo(() => (derived ? pathTo(derived, idx) : []), [derived, idx]);
-  const steps = useMemo(() => (derived ? pathSteps(network, derived, path) : []), [network, derived, path]);
+  const steps = useMemo(() => (derived ? pathSteps(network, derived, path, run?.inferred) : []), [network, derived, path, run]);
   const summary = pathSummary(steps);
 
   const state = nodeState(derived, idx, t);
@@ -73,7 +74,7 @@ export function NodeDetails({ idx, onClose }: { idx: number; onClose: () => void
                 const junction = network.nodes[s.idx].junction;
                 return (
                   <li key={s.idx} className={`${styles.step} ${done ? styles.done : ''} ${junction ? styles.junction : ''}`}>
-                    {s.via && <Hop via={s.via} km={s.km} dt={s.dt} />}
+                    {s.via && <Hop via={s.via} km={s.km} dt={s.dt} inferred={s.inferred} />}
                     <div className={styles.stepRow}>
                       <span className={`${styles.stepDot} ${k === 0 ? styles.seedDot : ''}`} />
                       <Name i={s.idx} className={styles.stepName} />
@@ -187,7 +188,7 @@ export function NodeDetails({ idx, onClose }: { idx: number; onClose: () => void
 
 const VIA_GLYPH: Record<Via, string> = { road: '—', river: '≈', sea: '∿', indirect: '⋯' };
 
-function Hop({ via, km, dt }: { via: Via; km: number; dt: number }) {
+function Hop({ via, km, dt, inferred }: { via: Via; km: number; dt: number; inferred: boolean }) {
   return (
     <div className={`${styles.hop} num`}>
       <span className={styles.hopGlyph} aria-hidden>{VIA_GLYPH[via]}</span>
@@ -198,6 +199,14 @@ function Hop({ via, km, dt }: { via: Via; km: number; dt: number }) {
       ) : (
         <span title="The previous place exported exposed travellers before it counted as invaded itself (under the selected criterion).">
           {dt} d*
+        </span>
+      )}
+      {inferred && (
+        <span
+          className={styles.inferred}
+          title="The simulation recorded this place's successful introduction as a later re-seeding. Its first introduction is attributed to the neighbour that was already infected (most frequent source across runs)."
+        >
+          {' '}· inferred
         </span>
       )}
     </div>

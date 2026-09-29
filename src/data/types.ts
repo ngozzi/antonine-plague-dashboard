@@ -103,7 +103,9 @@ export type Criterion = 'tA' | 'tB1' | 'tB2';
 export interface RunData {
   tag: PathogenTag;
   sheet: number; // position in the RunTable
-  infector: Int16Array; // idx of seeding node, -1 = root / never
+  infector: Int16Array; // idx of seeding node, -1 = root / never (always a tree rooted at the seed)
+  /** 1 where the infector link was reconstructed (engine link was a later re-introduction) */
+  inferred?: Int16Array;
   arrival: Record<Criterion, Int16Array>;
   /** Optional imperial weekly series (NaN-filled when unavailable). */
   weekly?: { weekDays: number; I: Float32Array; Dcum: Float32Array };

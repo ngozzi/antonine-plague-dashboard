@@ -76,12 +76,14 @@ export function createStaticSource(): DataSource {
       const tA = i16();
       const tB1 = i16();
       const tB2 = i16();
+      const inferred = i16();
       const I = f32();
       const Dcum = f32();
       return {
         tag,
         sheet,
         infector,
+        inferred,
         arrival: { tA, tB1, tB2 },
         weekly: Number.isNaN(I[0]) ? undefined : { weekDays: L.week_days, I, Dcum },
       };

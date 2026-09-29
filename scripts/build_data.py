@@ -63,12 +63,14 @@ N_WEEKS = 522  # 10 years of weekly imperial series kept per run
 
 # Per-run binary layout (little endian, contiguous, one record per run):
 #   int16  infector[N]   idx of the node that seeded this one, -1 = root/never
+#                        (time-consistent, repaired — see repair_infectors)
 #   int16  tA[N]         arrival day, criterion A (first E that takes hold)
 #   int16  tB1[N]        first local infectious
 #   int16  tB2[N]        first endogenous transmission
+#   int16  inferred[N]   1 = infector reconstructed by repair_infectors
 #   f32    I[N_WEEKS]    imperial prevalence (weekly)
 #   f32    Dcum[N_WEEKS] imperial cumulative disease deaths (weekly)
-RUN_BYTES = 4 * N_NODES * 2 + 2 * N_WEEKS * 4
+RUN_BYTES = 5 * N_NODES * 2 + 2 * N_WEEKS * 4
 
 EDGE_CLASS = {
     "road": "road",
@@ -149,39 +151,118 @@ def build_network(meta_nodes: list[dict]) -> dict:
 TOP_PATHS = 3
 
 
-def frequent_paths(rotte: np.ndarray, top: int = TOP_PATHS) -> tuple[list, list]:
+def repair_infectors(rotte: np.ndarray, adj: list[set[int]]) -> tuple[np.ndarray, np.ndarray]:
+    """Make every run's infector channel a proper tree rooted at the seed.
+
+    The engine records, for each place, who imported the exposed case that
+    TOOK HOLD (criterion A). When a place was first exposed earlier by someone
+    else and only "took hold" after a later re-introduction, the recorded link
+    can point forward in time — e.g. Messana (first exposed d471, from
+    Alexandria) exports to Regium (d472), and Messana's own A-event is later
+    re-seeded from Regium: Messana ↔ Regium becomes a cycle and the chain never
+    reaches the source (~60% of runs, ~40 places each).
+
+    Rule: visit places in order of first exposure (t_firstE, then t_A),
+    growing the tree from the seed. A recorded link is kept whenever its
+    infector is already in the tree and was exposed no later than the place
+    (same-day hand-offs included; ≈99% of links). Otherwise the first
+    introduction is attributed to a neighbour already in the tree and exposed
+    no later — preferring neighbours that had already taken hold by the
+    place's first exposure, then the one that most often infects this place
+    across the ensemble. The result is a tree: every chain ends at the seed.
+    """
+    n_run, _, n = rotte.shape
+    inf = rotte[:, 0].copy()
+    tE, tA = rotte[:, 1], rotte[:, 2]
+    # ensemble frequency of recorded infector→place links
+    freq = np.zeros((n, n), np.int32)
+    rr, ii = np.nonzero((inf >= 0) & (tA >= 0))
+    np.add.at(freq, (inf[rr, ii], ii), 1)
+    inferred = np.zeros_like(inf, dtype=np.int16)
+    n_fixed = 0
+    for r in range(n_run):
+        e, a, f = tE[r], tA[r], inf[r]
+        reached = np.nonzero(a >= 0)[0]
+        rooted = np.zeros(n, bool)
+        rooted[reached[f[reached] < 0]] = True  # seed(s)
+        order = sorted((i for i in reached if not rooted[i]), key=lambda i: (e[i], a[i], i))
+        # group by first-exposure day so same-day hand-offs resolve in any order
+        k = 0
+        while k < len(order):
+            day = e[order[k]]
+            group = []
+            while k < len(order) and e[order[k]] == day:
+                group.append(order[k])
+                k += 1
+            pending = set(group)
+            while pending:
+                # 1) keep recorded links whose infector is already in the tree
+                progress = True
+                while progress:
+                    progress = False
+                    for i in list(pending):
+                        if rooted[f[i]] and e[f[i]] <= e[i]:
+                            rooted[i] = progress = True
+                            pending.discard(i)
+                if not pending:
+                    break
+                # 2) break one same-day cycle: reattribute the place with the
+                #    best already-rooted neighbour, then go back to 1)
+                best_i, best_j, best_s = -1, -1, None
+                for i in pending:
+                    for j in adj[i]:
+                        if rooted[j] and e[j] <= e[i]:
+                            sc = (a[j] <= e[i], freq[j, i], -a[j])
+                            if best_s is None or sc > best_s:
+                                best_i, best_j, best_s = i, j, sc
+                assert best_i >= 0, f"run {r}: no rooted neighbour for {sorted(pending)}"
+                f[best_i] = best_j
+                inferred[r, best_i] = 1
+                rooted[best_i] = True
+                pending.discard(best_i)
+                n_fixed += 1
+        assert rooted[reached].all()
+    print(f"            repaired {n_fixed:,} of {len(rr):,} infector links "
+          f"({n_fixed / max(1, len(rr)):.2%}) in {int((inferred.sum(1) > 0).sum())}/{n_run} runs")
+    return inf, inferred
+
+
+def frequent_paths(inf_all: np.ndarray, tA_all: np.ndarray, top: int = TOP_PATHS) -> tuple[list, list]:
     """Most frequent full invasion chains (seed → node) across runs.
 
     Each node's chain in a run is identified by a rolling hash of its parent's
     chain, so full chains are only materialised for the winners.
     Returns (paths, n_reached): paths[node] = [[count, [seed, …, node]], …].
     """
-    n_run, _, n = rotte.shape
+    n_run, n = inf_all.shape
     counts: list[dict[int, int]] = [dict() for _ in range(n)]
     example: list[dict[int, int]] = [dict() for _ in range(n)]
     n_reached = np.zeros(n, int)
     for r in range(n_run):
-        inf, tA = rotte[r, 0], rotte[r, 2]
+        inf, tA = inf_all[r], tA_all[r]
         h = np.zeros(n, np.int64)
         ok = np.zeros(n, bool)
-        for i in np.argsort(np.where(tA >= 0, tA, 1 << 30), kind="stable"):
-            if tA[i] < 0:
-                break
-            par = inf[i]
-            if par < 0:
-                h[i] = hash((0, int(i)))
-            elif ok[par]:
-                h[i] = hash((int(h[par]), int(i)))
-            else:
-                continue  # parent not (yet) resolved: inconsistent record
-            ok[i] = True
-            n_reached[i] += 1
-            key = int(h[i])
-            counts[i][key] = counts[i].get(key, 0) + 1
-            example[i].setdefault(key, r)
+        for i0 in np.nonzero(tA >= 0)[0]:
+            # resolve the chain hash of i0 (and its unresolved ancestors)
+            stack, x = [], int(i0)
+            while not ok[x] and inf[x] >= 0 and len(stack) <= n:
+                stack.append(x)
+                x = int(inf[x])
+            if not ok[x]:  # x is the root
+                if inf[x] >= 0:
+                    raise AssertionError("infector tree not repaired")
+                h[x], ok[x] = hash((0, x)), True
+                stack.append(x) if x == i0 else None
+            for y in reversed(stack):
+                if not ok[y]:
+                    h[y], ok[y] = hash((int(h[inf[y]]), y)), True
+            n_reached[i0] += 1
+            key = int(h[i0])
+            counts[i0][key] = counts[i0].get(key, 0) + 1
+            example[i0].setdefault(key, r)
 
     def chain(r: int, i: int) -> list[int]:
-        out, inf, guard = [int(i)], rotte[r, 0], 0
+        out, inf, guard = [int(i)], inf_all[r], 0
         while inf[out[-1]] >= 0 and guard < n:
             out.append(int(inf[out[-1]]))
             guard += 1
@@ -214,6 +295,15 @@ def build_pathogen(tag: str, abc_meta: dict, impact: np.lib.npyio.NpzFile) -> di
     calo = impact[f"{tag}__calo"]
     y171 = years.index(171)
 
+    # Time-consistent infector trees (see repair_infectors).
+    id2idx = {nd["id"]: nd["idx"] for nd in meta["nodes"]}
+    adj: list[set[int]] = [set() for _ in range(N_NODES)]
+    for e in pd.read_csv(SOURCES["edges_csv"]).itertuples():
+        a_, b_ = id2idx[e.source], id2idx[e.target]
+        adj[a_].add(b_)
+        adj[b_].add(a_)
+    inf_fixed, inferred = repair_infectors(rotte, adj)
+
     # Shards.
     rdir = OUT / "runs" / tag
     rdir.mkdir(parents=True, exist_ok=True)
@@ -223,9 +313,9 @@ def build_pathogen(tag: str, abc_meta: dict, impact: np.lib.npyio.NpzFile) -> di
         for k in range(s0, min(s0 + SHARD_SIZE, n_run)):
             rid = int(idx.run_id[k])
             ch = rotte[k]
-            for c in (0, 2, 3, 4):  # infector, tA, tB1, tB2
-                assert ch[c].max() < 32767
-                buf += ch[c].astype("<i2").tobytes()
+            for arr in (inf_fixed[k], ch[2], ch[3], ch[4], inferred[k]):  # infector, tA, tB1, tB2, inferred
+                assert arr.max() < 32767
+                buf += arr.astype("<i2").tobytes()
             j = imp_pos.get(rid)
             if j is None:
                 missing_imp += 1
@@ -266,7 +356,7 @@ def build_pathogen(tag: str, abc_meta: dict, impact: np.lib.npyio.NpzFile) -> di
     for a in arcs.itertuples():
         tree_p[int(a.child_idx)] = round(float(a.p), 4)
 
-    paths, n_reached = frequent_paths(rotte)
+    paths, n_reached = frequent_paths(inf_fixed, rotte[:, 2])
     top_rome = paths[roma][0] if paths[roma] else None
     ens = {
         "coverage": cons.coverage.round(4).tolist(),
@@ -345,7 +435,7 @@ def main() -> None:
         "time_unit": "day",
         "run_layout": {"n_nodes": N_NODES, "n_weeks": N_WEEKS, "week_days": 7,
                        "record_bytes": RUN_BYTES,
-                       "fields": ["infector:i16", "tA:i16", "tB1:i16", "tB2:i16", "I:f32", "Dcum:f32"]},
+                       "fields": ["infector:i16", "tA:i16", "tB1:i16", "tB2:i16", "inferred:i16", "I:f32", "Dcum:f32"]},
         "peak_window": abc_meta["peak_window"],
         "pathogens": scenarios,
     }, separators=(",", ":")))

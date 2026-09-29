@@ -79,6 +79,14 @@ Select a place: click it on the map or in the tree, search it under *Trace a pla
   - The consensus-tree parent and its support are shown too.
 - **In the Invasion tree chart** (bottom right, where it shares a tab with Arrival vs distance). It shows the run's whole transmission tree over time, one row per place, with the selected path in ink.
 
+**Repairing the infector trees.** In the engine output, the `infector` of a place is whoever imported the exposed case that *took hold* (criterion A). When a place was first exposed by one neighbour and took hold only after a later re-introduction, the recorded links can form cycles. For example, Messana is exposed on day 471 from Alexandria and passes it to Regium; Messana's own A-event is then recorded as coming from Regium. Such chains never reach Nisibis. This happens in ~60% of runs, affecting ~40 places per run, and the paper's `road_to_rome.chain_to_rome` discards those runs.
+
+`build_data.py::repair_infectors` grows each run's tree from the seed, in order of first exposure:
+- It keeps every recorded link whose infector is already in the tree and was exposed no later than the place. This is 99.4–99.7% of links.
+- It reattributes the rest to an already-infected ORBIS neighbour, preferring the most frequent infector of that place across the ensemble.
+
+Every place in every run therefore has a complete path, and path frequencies are computed on all runs. Reattributed hops are marked *inferred* in the panel.
+
 In about 2% of hops, the infector's own criterion-A arrival comes a few days *after* the place it seeded, because it exported exposed travellers before it counted as invaded itself. These hops are marked `−N d*`.
 
 ### Scenario comparison (tab)

@@ -307,3 +307,8 @@
   font-size: 11.5px;
   color: var(--ink-3);
 }
+.inferred {
+  color: var(--gold);
+  font-style: italic;
+  cursor: help;
+}

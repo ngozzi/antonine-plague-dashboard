@@ -46,14 +46,22 @@ export interface PathStep {
   dt: number; // days since previous hop
   via: Via | null; // null for the source
   km: number;
+  inferred: boolean; // link reconstructed at build time (see build_data.repair_infectors)
 }
 
-export function pathSteps(net: Network, d: RunDerived, path: number[]): PathStep[] {
+export function pathSteps(net: Network, d: RunDerived, path: number[], inferred?: Int16Array): PathStep[] {
   return path.map((idx, k) => {
-    if (k === 0) return { idx, t: d.arrival[idx], dt: 0, via: null, km: 0 };
+    if (k === 0) return { idx, t: d.arrival[idx], dt: 0, via: null, km: 0, inferred: false };
     const prev = path[k - 1];
     const e = edgeBetween(net, prev, idx);
-    return { idx, t: d.arrival[idx], dt: d.arrival[idx] - d.arrival[prev], via: e ? e.cls : 'indirect', km: e?.km ?? 0 };
+    return {
+      idx,
+      t: d.arrival[idx],
+      dt: d.arrival[idx] - d.arrival[prev],
+      via: e ? e.cls : 'indirect',
+      km: e?.km ?? 0,
+      inferred: !!inferred?.[idx],
+    };
   });
 }
 
