@@ -67,6 +67,20 @@ Notes:
 | Soft red ring around a node | Hub activity: the node seeded at least 2 places in the last 60 days. |
 | Solid / dashed / blue links | Road / sea / river. Links darken once both ends are invaded. |
 
+### Invasion paths
+
+Select a place: click it on the map or in the tree, search it under *Trace a place*, or use the quick chips. The dashboard then shows how the epidemic got there.
+
+- **On the map.**
+  - The chain of transmissions from the source is drawn in solid red for hops already taken at the current time, and dashed ink for hops still ahead.
+  - Everything else steps back, so the route reads first.
+- **In the side panel.** The same chain, step by step: date, whether each hop went by road, river or sea, distance and delay. Clicking a date jumps the timeline to it.
+  - Below it are the three most frequent full paths across all runs, with the share of runs that followed each (computed in `build_data.py::frequent_paths`). Hover one to trace it on the map in gold.
+  - The consensus-tree parent and its support are shown too.
+- **In the Invasion tree chart** (bottom right, where it shares a tab with Arrival vs distance). It shows the run's whole transmission tree over time, one row per place, with the selected path in ink.
+
+In about 2% of hops, the infector's own criterion-A arrival comes a few days *after* the place it seeded, because it exported exposed travellers before it counted as invaded itself. These hops are marked `−N d*`.
+
 The **Arrival vs distance** panel plots arrival day against geographic distance or against ORBIS travel time from the source, and shows the Spearman ρ for each. Network travel time predicts arrival much better than geographic distance, which is the key point that spread follows connectivity.
 
 The **invasion criterion** (A / B1 / B2) switches between the engine's arrival definitions:

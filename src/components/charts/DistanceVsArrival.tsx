@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { scaleLinear } from 'd3-scale';
 import { useStore } from '../../state/store';
 import { spearman } from '../../lib/epidemic';
@@ -18,7 +18,7 @@ const M = { top: 8, right: 14, bottom: 22, left: 40 };
  * geographic distance to ORBIS travel time shows that network distance —
  * not geography — orders the invasion (Spearman ρ displayed for both).
  */
-export function DistanceVsArrival() {
+export function DistanceVsArrival({ switcher }: { switcher?: ReactNode }) {
   const derived = useStore((s) => s.derived);
   const distances = useStore((s) => s.distances);
   const network = useStore((s) => s.network)!;
@@ -101,7 +101,7 @@ export function DistanceVsArrival() {
   return (
     <div className={styles.card}>
       <div className={styles.head}>
-        <h3 className={styles.title}>Arrival vs distance</h3>
+        {switcher ?? <h3 className={styles.title}>Arrival vs distance</h3>}
         <div className={styles.toggle} role="radiogroup">
           {(Object.keys(MODES) as Mode[]).map((m) => (
             <button key={m} role="radio" aria-checked={mode === m} className={mode === m ? styles.on : ''} onClick={() => setMode(m)}>

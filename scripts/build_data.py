@@ -51,6 +51,7 @@ SOURCES = {
     "imperial": REPO / "final_paper/share_enrichment/dati_preprocessati/imperial_{tag}.npz",
     "impact": DATA / "share_impact/data/impact_cache_all.npz",
     "consensus_nodes": DATA / "share_mappe/dati_postprocessing/{tag}_nodi.csv",
+    "consensus_edges": DATA / "share_mappe/dati_postprocessing/{tag}_archi.csv",
     "provinces": REPO / "netsci26plot/data/provinces.geojson",
 }
 
@@ -125,7 +126,63 @@ def build_network(meta_nodes: list[dict]) -> dict:
             "province": str(row["province"]), "region": str(row["macro_regione"]),
             **({"key": KEY_PLACES[label]} if label in KEY_PLACES else {}),
         })
+    # Unnamed ORBIS junctions ("x"): name them after the nearest named place.
+    named = [d for d in out_nodes if d["name"].strip() not in ("", "x")]
+    for d in out_nodes:
+        if d["name"].strip() in ("", "x"):
+            near = min(named, key=lambda m: (m["lon"] - d["lon"]) ** 2 * np.cos(np.radians(d["lat"])) ** 2
+                       + (m["lat"] - d["lat"]) ** 2)
+            d["name"] = f"Junction near {near['name']}"
+            d["junction"] = True
     return {"nodes": out_nodes, "edges": edges}
+
+
+TOP_PATHS = 3
+
+
+def frequent_paths(rotte: np.ndarray, top: int = TOP_PATHS) -> tuple[list, list]:
+    """Most frequent full invasion chains (seed → node) across runs.
+
+    Each node's chain in a run is identified by a rolling hash of its parent's
+    chain, so full chains are only materialised for the winners.
+    Returns (paths, n_reached): paths[node] = [[count, [seed, …, node]], …].
+    """
+    n_run, _, n = rotte.shape
+    counts: list[dict[int, int]] = [dict() for _ in range(n)]
+    example: list[dict[int, int]] = [dict() for _ in range(n)]
+    n_reached = np.zeros(n, int)
+    for r in range(n_run):
+        inf, tA = rotte[r, 0], rotte[r, 2]
+        h = np.zeros(n, np.int64)
+        ok = np.zeros(n, bool)
+        for i in np.argsort(np.where(tA >= 0, tA, 1 << 30), kind="stable"):
+            if tA[i] < 0:
+                break
+            par = inf[i]
+            if par < 0:
+                h[i] = hash((0, int(i)))
+            elif ok[par]:
+                h[i] = hash((int(h[par]), int(i)))
+            else:
+                continue  # parent not (yet) resolved: inconsistent record
+            ok[i] = True
+            n_reached[i] += 1
+            key = int(h[i])
+            counts[i][key] = counts[i].get(key, 0) + 1
+            example[i].setdefault(key, r)
+
+    def chain(r: int, i: int) -> list[int]:
+        out, inf, guard = [int(i)], rotte[r, 0], 0
+        while inf[out[-1]] >= 0 and guard < n:
+            out.append(int(inf[out[-1]]))
+            guard += 1
+        return out[::-1]
+
+    paths = []
+    for i in range(n):
+        best = sorted(counts[i].items(), key=lambda kv: -kv[1])[:top]
+        paths.append([[c, chain(example[i][k], i)] for k, c in best])
+    return paths, n_reached.tolist()
 
 
 def build_pathogen(tag: str, abc_meta: dict, impact: np.lib.npyio.NpzFile) -> dict:
@@ -195,16 +252,28 @@ def build_pathogen(tag: str, abc_meta: dict, impact: np.lib.npyio.NpzFile) -> di
     representative = {"p10": pick(0.10), "p50": pick(0.50), "p90": pick(0.90)}
 
     cons = pd.read_csv(p("consensus_nodes", tag)).sort_values("idx")
+    arcs = pd.read_csv(p("consensus_edges", tag))
+    tree_p = [None] * N_NODES
+    for a in arcs.itertuples():
+        tree_p[int(a.child_idx)] = round(float(a.p), 4)
+
+    paths, n_reached = frequent_paths(rotte)
+    top_rome = paths[roma][0] if paths[roma] else None
     ens = {
         "coverage": cons.coverage.round(4).tolist(),
         "t_med": cons.t_med.round(1).tolist(),
         "t_p10": cons.t_p10.round(1).tolist(),
         "t_p90": cons.t_p90.round(1).tolist(),
         "tree_parent": cons.parent_idx.fillna(-1).astype(int).tolist(),
+        "tree_p": tree_p,
     }
 
     print(f"  {tag:9s} runs={n_run:5d} shards={-(-n_run // SHARD_SIZE):3d} "
           f"median t_rome={np.nanmedian(t_rome):.0f}d missing_weekly={missing_imp}")
+    if top_rome:
+        names = {n["idx"]: n["label"] for n in meta["nodes"]}
+        print(f"            top path to Rome ({top_rome[0] / n_reached[roma]:.1%} of runs): "
+              + " → ".join(names[i] for i in top_rome[1]))
     return {
         "tag": tag,
         "label": abc_meta["path_en"][tag].capitalize(),
@@ -216,6 +285,8 @@ def build_pathogen(tag: str, abc_meta: dict, impact: np.lib.npyio.NpzFile) -> di
         "runs": runs,
         "representative": representative,
         "ensemble": ens,
+        "paths": paths,
+        "n_reached": n_reached,
     }, meta
 
 

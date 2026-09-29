@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../../state/store';
 import { invasionCurve, popCurve } from '../../lib/epidemic';
 import { TimeChart, type Series } from './TimeChart';
 import { DistanceVsArrival } from './DistanceVsArrival';
+import { InvasionTree } from './InvasionTree';
 import styles from './Chart.module.css';
 
 const RED = '#9e1b1b';
@@ -46,7 +47,28 @@ export function Charts() {
         yFormat={pct}
         markers={markers}
       />
-      <DistanceVsArrival />
+      <SwitchPanel />
     </div>
   );
+}
+
+type Third = 'tree' | 'distance';
+const THIRD: { id: Third; label: string }[] = [
+  { id: 'tree', label: 'Invasion tree' },
+  { id: 'distance', label: 'Arrival vs distance' },
+];
+
+/** Third chart slot: invasion tree ↔ arrival-vs-distance, chosen by title tabs. */
+function SwitchPanel() {
+  const [mode, setMode] = useState<Third>('tree');
+  const switcher = (
+    <div className={styles.titleTabs} role="tablist">
+      {THIRD.map((o) => (
+        <button key={o.id} role="tab" aria-selected={mode === o.id} className={mode === o.id ? styles.titleOn : ''} onClick={() => setMode(o.id)}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+  return mode === 'tree' ? <InvasionTree switcher={switcher} /> : <DistanceVsArrival switcher={switcher} />;
 }

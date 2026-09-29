@@ -1,3 +1,4 @@
+import { useStore } from '../../state/store';
 import styles from './MapView.module.css';
 
 const Dot = ({ fill, ring }: { fill: string; ring?: string }) => (
@@ -14,6 +15,7 @@ const Line = ({ color, dash, width = 1.4 }: { color: string; dash?: string; widt
 );
 
 export function MapLegend() {
+  const selected = useStore((s) => s.selected);
   return (
     <div className={styles.legend} aria-label="Legend">
       <span className={styles.legendItem}><Dot fill="#68788c" /> Not yet invaded</span>
@@ -24,6 +26,14 @@ export function MapLegend() {
       <span className={styles.legendItem}><Line color="#608ea0" width={1.8} /> River</span>
       <span className={styles.legendItem}><Dot fill="#d4911e" ring="#d4911e" /> Outbreak source</span>
       <span className={styles.legendItem}><Line color="#b22222" width={2} /> Transmission</span>
+      {selected === null ? (
+        <span className={styles.legendHint}>Click a place to trace its invasion path</span>
+      ) : (
+        <>
+          <span className={styles.legendItem}><Line color="#80161a" width={3} /> Path taken</span>
+          <span className={styles.legendItem}><Line color="#1a1a1a" dash="3 3" width={1.8} /> Path still ahead</span>
+        </>
+      )}
     </div>
   );
 }

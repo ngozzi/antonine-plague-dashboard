@@ -33,8 +33,9 @@ export const yearStart = (year: number) => (year - EPOCH_YEAR) * 365;
 /** "1 y 7 mo" / "213 days" */
 export function formatDuration(days: number) {
   if (days < 120) return `${Math.round(days)} days`;
-  const y = Math.floor(days / 365);
-  const mo = Math.round((days - y * 365) / 30.4);
+  let y = Math.floor(days / 365);
+  let mo = Math.round((days - y * 365) / 30.4);
+  if (mo >= 12) { y += 1; mo = 0; }
   if (y === 0) return `${mo} mo`;
   return mo ? `${y} y ${mo} mo` : `${y} y`;
 }

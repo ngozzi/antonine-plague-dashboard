@@ -14,6 +14,7 @@ import type { Layer } from '@deck.gl/core';
 import type { FeatureCollection } from 'geojson';
 import type { Network, OrbisEdge, OrbisNode } from '../../data/types';
 import { countAt, type RunDerived } from '../../lib/epidemic';
+import { pathTo } from '../../lib/paths';
 import { C, T, easeOut, mix, nodeFill, type RGBA } from '../../lib/colors';
 
 export interface LayerCtx {
@@ -26,6 +27,7 @@ export interface LayerCtx {
   hovered: number | null;
   selected: number | null;
   showProvinces: boolean;
+  previewPath: number[] | null;
 }
 
 const dashExt = new PathStyleExtension({ dash: true });
@@ -119,6 +121,11 @@ export function buildLayers(ctx: LayerCtx): Layer[] {
 
   if (!derived) return withNodes(layers, ctx, dtOf, zScale);
 
+  // Selected place → its invasion path; everything else steps back.
+  const path = ctx.selected !== null ? pathTo(derived, ctx.selected) : [];
+  const focus = path.length > 1 || (ctx.previewPath?.length ?? 0) > 1;
+  const dim = focus ? 0.35 : 1;
+
   // --- transmission lines (infector → target) -------------------------------
   const k = countAt(derived, t);
   const invaded = Array.from(derived.order.subarray(0, k));
@@ -137,14 +144,14 @@ export function buildLayers(ctx: LayerCtx): Layer[] {
       getColor: (i) => {
         const dt = t - derived.arrival[i];
         const fresh = 1 - Math.min(1, Math.max(0, (dt - T.arcGrow) / T.arcFade));
-        return [...C.red, 36 + 200 * fresh];
+        return [...C.red, (36 + 200 * fresh) * dim];
       },
       getWidth: (i) => {
         const dt = t - derived.arrival[i];
         return 0.8 + 1.6 * (1 - Math.min(1, dt / (T.arcGrow + T.arcFade)));
       },
       widthUnits: 'pixels',
-      updateTriggers: { getTargetPosition: t, getColor: t, getWidth: t },
+      updateTriggers: { getTargetPosition: t, getColor: [t, dim], getWidth: t },
     }),
   );
 
@@ -165,11 +172,11 @@ export function buildLayers(ctx: LayerCtx): Layer[] {
       radiusUnits: 'pixels',
       filled: true,
       stroked: true,
-      getFillColor: ([, c]) => [...C.red, Math.min(40, 6 + c * 5)],
-      getLineColor: ([, c]) => [...C.deepRed, Math.min(170, 50 + c * 22)],
+      getFillColor: ([, c]) => [...C.red, Math.min(40, 6 + c * 5) * dim],
+      getLineColor: ([, c]) => [...C.deepRed, Math.min(170, 50 + c * 22) * dim],
       getLineWidth: ([, c]) => Math.min(2.2, 0.8 + c * 0.3),
       lineWidthUnits: 'pixels',
-      updateTriggers: { getRadius: [t, zScale], getFillColor: t, getLineColor: t, getLineWidth: t },
+      updateTriggers: { getRadius: [t, zScale], getFillColor: [t, dim], getLineColor: [t, dim], getLineWidth: t },
     }),
   );
 
@@ -185,17 +192,88 @@ export function buildLayers(ctx: LayerCtx): Layer[] {
       radiusUnits: 'pixels',
       filled: false,
       stroked: true,
-      getLineColor: (i) => [...C.red, 220 * (1 - (t - derived.arrival[i]) / T.pulse)],
+      getLineColor: (i) => [...C.red, 220 * (1 - (t - derived.arrival[i]) / T.pulse) * dim],
       getLineWidth: 1.4,
       lineWidthUnits: 'pixels',
-      updateTriggers: { getRadius: [t, zScale], getLineColor: t },
+      updateTriggers: { getRadius: [t, zScale], getLineColor: [t, dim] },
     }),
   );
 
-  return withNodes(layers, ctx, dtOf, zScale);
+  layers.push(...pathLayers(ctx, derived, path, pos));
+  return withNodes(layers, ctx, dtOf, zScale, path);
 }
 
-function withNodes(layers: Layer[], ctx: LayerCtx, dtOf: (i: number) => number, zScale: number): Layer[] {
+interface Hop {
+  a: number;
+  b: number;
+  done: boolean;
+}
+
+/**
+ * The selected place's invasion path: hops already taken at time t are solid
+ * deep red (on a light casing), hops still to come are dashed ink, so during
+ * playback the route fills in hop by hop. An optional preview path (hovered
+ * in the side panel) is drawn in dashed gold.
+ */
+function pathLayers(ctx: LayerCtx, derived: RunDerived, path: number[], pos: (i: number) => [number, number]): Layer[] {
+  const { t } = ctx;
+  const out: Layer[] = [];
+  const preview = ctx.previewPath;
+  if (preview && preview.length > 1)
+    out.push(
+      new PathLayer<number[], { getDashArray?: unknown; dashJustified?: boolean }>({
+        id: 'preview-path',
+        data: [preview],
+        getPath: (p) => p.map(pos),
+        getColor: [...C.gold, 240],
+        getWidth: 3,
+        widthUnits: 'pixels',
+        getDashArray: [5, 3],
+        dashJustified: true,
+        extensions: [dashExt],
+        jointRounded: true,
+      }),
+    );
+  if (path.length < 2) return out;
+  const hops: Hop[] = [];
+  for (let k = 1; k < path.length; k++) hops.push({ a: path[k - 1], b: path[k], done: t >= derived.arrival[path[k]] });
+  const done = hops.filter((h) => h.done);
+  const todo = hops.filter((h) => !h.done);
+  out.push(
+    new LineLayer<Hop>({
+      id: 'path-casing',
+      data: done,
+      getSourcePosition: (h) => pos(h.a),
+      getTargetPosition: (h) => pos(h.b),
+      getColor: [251, 249, 245, 230],
+      getWidth: 6,
+      widthUnits: 'pixels',
+    }),
+    new LineLayer<Hop>({
+      id: 'path-done',
+      data: done,
+      getSourcePosition: (h) => pos(h.a),
+      getTargetPosition: (h) => pos(h.b),
+      getColor: [...C.deepRed, 255],
+      getWidth: 3,
+      widthUnits: 'pixels',
+    }),
+    new PathLayer<Hop, { getDashArray?: unknown; dashJustified?: boolean }>({
+      id: 'path-todo',
+      data: todo,
+      getPath: (h) => [pos(h.a), pos(h.b)],
+      getColor: [...C.ink, 200],
+      getWidth: 1.8,
+      widthUnits: 'pixels',
+      getDashArray: [3, 3],
+      dashJustified: true,
+      extensions: [dashExt],
+    }),
+  );
+  return out;
+}
+
+function withNodes(layers: Layer[], ctx: LayerCtx, dtOf: (i: number) => number, zScale: number, path: number[] = []): Layer[] {
   const { network, derived, t } = ctx;
   const { nodes } = network;
   const seed = derived?.seed ?? -1;
@@ -222,6 +300,7 @@ function withNodes(layers: Layer[], ctx: LayerCtx, dtOf: (i: number) => number, 
   const rings: { i: number; color: RGBA; r: number; w: number }[] = [];
   if (seed >= 0) rings.push({ i: seed, color: [...C.gold, 230], r: 7, w: 1.5 });
   rings.push({ i: rome, color: [...C.ink, 170], r: 7, w: 1 });
+  for (const i of path.slice(1, -1)) rings.push({ i, color: [...C.deepRed, 230], r: 2.5, w: 1.4 });
   if (ctx.selected !== null) rings.push({ i: ctx.selected, color: [...C.ink, 255], r: 6, w: 1.8 });
   if (ctx.hovered !== null && ctx.hovered !== ctx.selected) rings.push({ i: ctx.hovered, color: [...C.ink, 140], r: 5, w: 1.2 });
   layers.push(
@@ -239,6 +318,35 @@ function withNodes(layers: Layer[], ctx: LayerCtx, dtOf: (i: number) => number, 
       updateTriggers: { getRadius: zScale },
     }),
   );
+
+  // Names along the selected path (junctions and already-labelled places skipped).
+  const pathNamed = declutter(
+    path.filter((i) => !nodes[i].key && !nodes[i].junction),
+    nodes.filter((n) => n.key),
+    nodes,
+    ctx.zoom,
+  );
+  if (pathNamed.length)
+    layers.push(
+      new TextLayer<number>({
+        id: 'path-labels',
+        data: pathNamed,
+        getPosition: (i) => [nodes[i].lon, nodes[i].lat],
+        getText: (i) => nodes[i].name,
+        getSize: 12,
+        getColor: [...C.deepRed, 255],
+        getPixelOffset: (i) => [radiusOf(nodes[i]) * zScale + 6, 0],
+        getTextAnchor: 'start',
+        getAlignmentBaseline: 'center',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontWeight: 600,
+        fontSettings: { sdf: true, fontSize: 64, buffer: 6 },
+        outlineWidth: 4,
+        outlineColor: [247, 244, 238, 240],
+        characterSet: 'auto',
+        updateTriggers: { getPixelOffset: zScale },
+      }),
+    );
 
   // Labels: key places always, larger towns as the user zooms in.
   const minPop = ctx.zoom > 6 ? 8000 : ctx.zoom > 5.2 ? 30000 : Infinity;
@@ -267,4 +375,30 @@ function withNodes(layers: Layer[], ctx: LayerCtx, dtOf: (i: number) => number, 
     }),
   );
   return layers;
+}
+
+/** Web-Mercator pixel position at a zoom level (for label de-overlap). */
+function px(n: OrbisNode, zoom: number): [number, number] {
+  const scale = (512 * 2 ** zoom) / (2 * Math.PI);
+  const lat = (n.lat * Math.PI) / 180;
+  return [scale * ((n.lon * Math.PI) / 180), -scale * Math.log(Math.tan(Math.PI / 4 + lat / 2))];
+}
+
+/**
+ * Greedy label de-overlap: keep a candidate only if its label box does not
+ * collide with an already-placed one (key-place labels are placed first).
+ */
+function declutter(candidates: number[], fixed: OrbisNode[], nodes: OrbisNode[], zoom: number): number[] {
+  const W = 90;
+  const H = 15;
+  const placed = fixed.map((n) => px(n, zoom));
+  const out: number[] = [];
+  for (const i of candidates) {
+    const [x, y] = px(nodes[i], zoom);
+    if (placed.every(([a, b]) => Math.abs(a - x) > W || Math.abs(b - y) > H)) {
+      placed.push([x, y]);
+      out.push(i);
+    }
+  }
+  return out;
 }

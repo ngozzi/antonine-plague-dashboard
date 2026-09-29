@@ -26,6 +26,7 @@ export interface OrbisNode {
   province: string;
   region: string;
   key?: string; // present for emphasised places (value = display name)
+  junction?: boolean; // unnamed ORBIS junction (named after nearest place)
 }
 
 export interface OrbisEdge {
@@ -62,6 +63,7 @@ export interface EnsembleSummary {
   t_p10: number[];
   t_p90: number[];
   tree_parent: number[]; // consensus invasion tree
+  tree_p?: (number | null)[]; // support of the consensus edge into each node
 }
 
 export type PathogenTag = string;
@@ -78,6 +80,13 @@ export interface Scenario {
   /** sheet indices of representative runs, by time-to-Rome percentile */
   representative: { p10: number; p50: number; p90: number };
   ensemble: EnsembleSummary;
+  /**
+   * Most frequent full invasion chains per node across runs:
+   * paths[node] = [[count, [seed, …, node]], …] (descending count).
+   */
+  paths?: [number, number[]][][];
+  /** number of runs in which each node is reached */
+  n_reached?: number[];
 }
 
 export interface ScenarioCatalog {

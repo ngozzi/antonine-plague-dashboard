@@ -31,6 +31,8 @@ interface State {
 
   hovered: number | null;
   selected: number | null;
+  /** an alternative path (e.g. hovered in the across-runs list) drawn on the map */
+  previewPath: number[] | null;
   panelOpen: boolean;
   tab: Tab;
 
@@ -46,6 +48,7 @@ interface State {
   setSpeed(s: number): void;
   setHovered(i: number | null): void;
   setSelected(i: number | null): void;
+  setPreviewPath(p: number[] | null): void;
   togglePanel(): void;
   setTab(t: Tab): void;
 }
@@ -71,6 +74,7 @@ export const useStore = create<State>((set, get) => ({
   speed: 1,
   hovered: null,
   selected: null,
+  previewPath: null,
   panelOpen: true,
   tab: 'spread',
 
@@ -129,7 +133,8 @@ export const useStore = create<State>((set, get) => ({
   restart: () => set({ t: get().derived?.tStart ?? 0, playing: false }),
   setSpeed: (speed) => set({ speed }),
   setHovered: (hovered) => set({ hovered }),
-  setSelected: (selected) => set({ selected }),
+  setSelected: (selected) => set({ selected, previewPath: null }),
+  setPreviewPath: (previewPath) => set({ previewPath }),
   togglePanel: () => set({ panelOpen: !get().panelOpen }),
   setTab: (tab) => set({ tab }),
 }));

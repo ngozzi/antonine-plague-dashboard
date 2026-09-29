@@ -25,6 +25,14 @@ export function ControlPanel() {
   const { selectPathogen, selectRun, setCriterion, togglePanel } = useStore.getState();
   const sc = useStore(scenarioOf);
   const [idQuery, setIdQuery] = useState('');
+  const [placeQuery, setPlaceQuery] = useState('');
+  const selected = useStore((s) => s.selected);
+  const setSelected = useStore((s) => s.setSelected);
+  const byName = useMemo(() => new Map(network.nodes.map((n) => [n.name.toLowerCase(), n.idx])), [network]);
+  const quick = useMemo(
+    () => ['Roma', 'Alexandria', 'Carthago', 'Londinium'].map((nm) => byName.get(nm.toLowerCase())).filter((i): i is number => i !== undefined),
+    [byName],
+  );
 
   // Runs ordered by time to Rome, for the stepper.
   const order = useMemo(() => {
@@ -90,6 +98,40 @@ export function ControlPanel() {
         <div className={styles.static}>
           <span className={styles.seedDot} /> {seedName}
           <span className={styles.muted}>· 1 Jan 165 CE</span>
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <label className={styles.label} htmlFor="trace">Trace a place</label>
+        <form
+          className={styles.find}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const i = byName.get(placeQuery.trim().toLowerCase());
+            if (i !== undefined) { setSelected(i); setPlaceQuery(''); }
+          }}
+        >
+          <input
+            id="trace"
+            list="places"
+            value={placeQuery}
+            onChange={(e) => {
+              setPlaceQuery(e.target.value);
+              const i = byName.get(e.target.value.trim().toLowerCase());
+              if (i !== undefined) { setSelected(i); setPlaceQuery(''); }
+            }}
+            placeholder="Search a place…"
+          />
+          <datalist id="places">
+            {network.nodes.filter((n) => !n.junction).map((n) => <option key={n.idx} value={n.name} />)}
+          </datalist>
+        </form>
+        <div className={styles.chips}>
+          {quick.map((i) => (
+            <button key={i} className={selected === i ? styles.chipOn : ''} onClick={() => setSelected(selected === i ? null : i)}>
+              {network.nodes[i].key ?? network.nodes[i].name}
+            </button>
+          ))}
         </div>
       </section>
 

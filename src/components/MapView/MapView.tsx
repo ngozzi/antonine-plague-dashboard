@@ -30,6 +30,7 @@ export function MapView() {
   const t = useStore((s) => s.t);
   const hovered = useStore((s) => s.hovered);
   const selected = useStore((s) => s.selected);
+  const previewPath = useStore((s) => s.previewPath);
   const setHovered = useStore((s) => s.setHovered);
   const setSelected = useStore((s) => s.setSelected);
 
@@ -78,6 +79,7 @@ export function MapView() {
     hovered,
     selected,
     showProvinces,
+    previewPath,
   });
 
   return (

@@ -112,6 +112,19 @@ function makeCatalog(): ScenarioCatalog {
     const sims = Array.from({ length: RUNS }, (_, k) => simulate(tag, k));
     const tRome = sims.map((s) => s.arrival.tA[0]);
     const order = [...tRome.keys()].sort((a, b) => tRome[a] - tRome[b]);
+    const counts = Array.from({ length: N }, () => new Map<string, number>());
+    sims.forEach((s) => {
+      for (let i = 0; i < N; i++) {
+        if (s.arrival.tA[i] < 0) continue;
+        const chain = [i];
+        while (s.infector[chain[0]] >= 0 && chain.length < N) chain.unshift(s.infector[chain[0]]);
+        const k = chain.join(',');
+        counts[i].set(k, (counts[i].get(k) ?? 0) + 1);
+      }
+    });
+    const paths = counts.map((m) =>
+      [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, c]) => [c, k.split(',').map(Number)] as [number, number[]]),
+    );
     return {
       tag,
       label,
@@ -139,6 +152,8 @@ function makeCatalog(): ScenarioCatalog {
         t_p90: Array.from(sims[order[18]].arrival.tA),
         tree_parent: Array.from(sims[order[10]].infector),
       },
+      paths,
+      n_reached: counts.map((m) => [...m.values()].reduce((a, b) => a + b, 0)),
     };
   });
   return { calendar: { epoch_year: 165, days_per_year: 365 }, time_unit: 'day', pathogens };
