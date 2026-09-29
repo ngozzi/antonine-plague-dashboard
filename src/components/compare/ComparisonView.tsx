@@ -3,7 +3,7 @@ import { useStore } from '../../state/store';
 import { evidence, type Evidence } from '../../lib/abc';
 import { formatDate } from '../../lib/calendar';
 import { PeakDensity, type DensityMode } from './PeakDensity';
-import { BayesFactors, Posterior, Sensitivity, UPPER_BOUNDS } from './Panels';
+import { BayesFactors, Posterior, UPPER_BOUNDS } from './Panels';
 import { ORDER } from './palette';
 import styles from './Compare.module.css';
 
@@ -69,6 +69,20 @@ export function ComparisonView() {
             </button>
           </div>
         </div>
+        <div className={styles.info} tabIndex={0} aria-describedby="method-tip">
+          <span className={styles.infoIcon} aria-hidden>i</span> Method
+          <div id="method-tip" role="tooltip" className={styles.infoTip}>
+            <p>
+              ABC rejection over {pathogens.map((p) => p.n_total.toLocaleString()).join(' / ')} prior draws of (R₀, mobility, friction). A draw is
+              accepted when its epidemic peaks in Rome inside the window.
+            </p>
+            <p>
+              Evidence = accepted / all draws; BF = ratio of evidences, 95% CI from binomial Monte Carlo error on log BF. Posterior with equal
+              prior odds on the three pathogens.
+            </p>
+            <p className={styles.muted}>Source: final_paper/plot1/plot_peak_density.ipynb</p>
+          </div>
+        </div>
         <div className={styles.winReadout}>
           <span className="eyebrow">Acceptance window</span>
           <b className="num">
@@ -87,18 +101,6 @@ export function ComparisonView() {
         <div className={styles.side}>
           <Posterior pathogens={pathogens} evidence={ev} />
           <BayesFactors pathogens={pathogens} evidence={ev} />
-        </div>
-        <div className={styles.sensWrap}>
-          <Sensitivity pathogens={pathogens} parade={parade} window={win} onWindow={setWindow} />
-          <div className={`${styles.card} ${styles.method}`}>
-            <h3 className={styles.cardTitle}>Method</h3>
-            <p>
-              ABC rejection over {pathogens.map((p) => p.n_total.toLocaleString()).join(' / ')} prior draws of (R₀, mobility, friction). A draw is
-              accepted when its epidemic peaks in Rome inside the window. Evidence = accepted / all draws; BF = ratio of evidences, 95% CI from
-              binomial Monte Carlo error on log BF. Posterior with equal prior odds on the three pathogens.
-            </p>
-            <p className={styles.muted}>Source: final_paper/plot1/plot_peak_density.ipynb</p>
-          </div>
         </div>
       </div>
     </div>

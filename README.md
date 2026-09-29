@@ -89,7 +89,6 @@ This tab asks which pathogen best explains an epidemic that peaks in Rome in lat
 - **Density of peak times per pathogen** (Gaussian KDE with Scott's rule, as in scipy). The shaded area is the draws accepted by the window. The window can be dragged on the chart or set with the paper's presets: from the 12 Oct 166 parade + 1…6 weeks, to 31 Dec 166 / 31 Jan 167 / 28 Feb 167.
 - **Posterior model probabilities** with equal prior odds on the three pathogens.
 - **Bayes factors** with their 95% Monte Carlo CI, on the Jeffreys scale.
-- **Sensitivity grid.** A 6 × 3 grid of windows. Click a cell to select that window.
 
 With the default window (26 Oct – 31 Dec 166) the numbers match the notebook: BF smallpox:measles 9.53, smallpox:plague 17.05, plague:measles 0.56; posteriors 85.9 / 9.0 / 5.0%.
 

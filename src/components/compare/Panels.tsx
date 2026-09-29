@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import { scaleLog } from 'd3-scale';
 import type { ComparisonPathogen } from '../../data/types';
-import { bayesFactor, evidence, jeffreys, JEFFREYS, posterior, type Evidence } from '../../lib/abc';
-import { formatDate } from '../../lib/calendar';
-import { fmtInt, fmtPct } from '../../lib/format';
+import { bayesFactor, jeffreys, JEFFREYS, posterior, type Evidence } from '../../lib/abc';
+import { fmtPct } from '../../lib/format';
 import { useSize } from '../charts/useSize';
 import { BF_PAIRS, colorOf } from './palette';
 import styles from './Compare.module.css';
@@ -118,87 +117,8 @@ export function BayesFactors({ pathogens, evidence: ev }: { pathogens: Compariso
   );
 }
 
-const LB_WEEKS = [1, 2, 3, 4, 5, 6];
 export const UPPER_BOUNDS: [number, string][] = [
   [729, '31 Dec 166'],
   [760, '31 Jan 167'],
   [788, '28 Feb 167'],
 ];
-const MIN_ACC = 30;
-
-/**
- * Window sensitivity (paper supplementary): rows = window start (parade +
- * 1…6 weeks), columns = window end. Each cell shows the posterior model
- * probabilities for that window; click a cell to use it.
- */
-export function Sensitivity({
-  pathogens,
-  parade,
-  window: win,
-  onWindow,
-}: {
-  pathogens: ComparisonPathogen[];
-  parade: number;
-  window: [number, number];
-  onWindow: (w: [number, number]) => void;
-}) {
-  const grid = useMemo(
-    () =>
-      LB_WEEKS.map((wk) => {
-        const lo = parade + 7 * wk;
-        return UPPER_BOUNDS.map(([hi]) => {
-          const ev = pathogens.map((p) => evidence(p, lo, hi));
-          return { lo, hi, ev, probs: posterior(ev), low: Math.min(...ev.map((e) => e.accepted)) < MIN_ACC };
-        });
-      }),
-    [pathogens, parade],
-  );
-
-  return (
-    <div className={styles.card}>
-      <div className={styles.cardHead}>
-        <h3 className={styles.cardTitle}>Sensitivity to the acceptance window</h3>
-        <span className={styles.note}>posterior probabilities · click a cell to select that window</span>
-      </div>
-      <table className={styles.sens}>
-        <thead>
-          <tr>
-            <th>Window start ↓ / end →</th>
-            {UPPER_BOUNDS.map(([, l]) => <th key={l}>{l}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {grid.map((row, i) => (
-            <tr key={i}>
-              <th className="num">+{LB_WEEKS[i]} wk · {formatDate(row[0].lo, false)}</th>
-              {row.map((c) => {
-                const on = c.lo === win[0] && c.hi === win[1];
-                const best = c.probs.indexOf(Math.max(...c.probs));
-                return (
-                  <td key={c.hi}>
-                    <button
-                      className={`${styles.cell} ${on ? styles.cellOn : ''} ${c.low ? styles.cellLow : ''}`}
-                      onClick={() => onWindow([c.lo, c.hi])}
-                      title={pathogens.map((p, k) => `${p.label}: ${fmtPct(c.probs[k], 1)} (${fmtInt(c.ev[k].accepted)} accepted)`).join('\n')}
-                    >
-                      <span className={styles.stack}>
-                        {pathogens.map((p, k) => (
-                          <i key={p.tag} style={{ width: `${c.probs[k] * 100}%`, background: colorOf(p.tag) }} />
-                        ))}
-                      </span>
-                      <span className="num">
-                        {pathogens[best].label} {fmtPct(c.probs[best])}
-                        {c.low && ' †'}
-                      </span>
-                    </button>
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className={styles.note}>† fewer than {MIN_ACC} accepted draws for some pathogen: noisy estimate.</p>
-    </div>
-  );
-}
