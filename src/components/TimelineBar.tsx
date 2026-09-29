@@ -3,7 +3,7 @@ import { useStore } from '../state/store';
 import { formatDate, formatDuration, yearStart } from '../lib/calendar';
 import styles from './TimelineBar.module.css';
 
-const SPEEDS = [0.5, 1, 2, 4];
+const SPEEDS = [0.3, 0.5, 1, 2];
 
 export function TimelineBar() {
   const derived = useStore((s) => s.derived);
