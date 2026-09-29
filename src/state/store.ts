@@ -6,7 +6,7 @@
  */
 import { create } from 'zustand';
 import { dataSource } from '../data';
-import type { Criterion, Network, RunData, Scenario, ScenarioCatalog } from '../data/types';
+import type { ComparisonData, Criterion, Network, RunData, Scenario, ScenarioCatalog } from '../data/types';
 import { deriveRun, seedDistances, type RunDerived, type SeedDistances } from '../lib/epidemic';
 
 export type Tab = 'spread' | 'impact' | 'arrival' | 'centrality' | 'compare';
@@ -36,6 +36,12 @@ interface State {
   panelOpen: boolean;
   tab: Tab;
 
+  /** scenario comparison: loaded lazily when the tab is first opened */
+  comparison: ComparisonData | null;
+  comparisonError?: string;
+  /** acceptance window on the peak day at Rome [lo, hi] (days) */
+  window: [number, number];
+
   init(): Promise<void>;
   selectPathogen(tag: string): Promise<void>;
   selectRun(sheet: number): Promise<void>;
@@ -51,6 +57,7 @@ interface State {
   setPreviewPath(p: number[] | null): void;
   togglePanel(): void;
   setTab(t: Tab): void;
+  setWindow(w: [number, number]): void;
 }
 
 export const scenarioOf = (s: Pick<State, 'catalog' | 'pathogen'>): Scenario | undefined =>
@@ -77,6 +84,8 @@ export const useStore = create<State>((set, get) => ({
   previewPath: null,
   panelOpen: true,
   tab: 'spread',
+  comparison: null,
+  window: [663, 729],
 
   async init() {
     try {
@@ -136,7 +145,15 @@ export const useStore = create<State>((set, get) => ({
   setSelected: (selected) => set({ selected, previewPath: null }),
   setPreviewPath: (previewPath) => set({ previewPath }),
   togglePanel: () => set({ panelOpen: !get().panelOpen }),
-  setTab: (tab) => set({ tab }),
+  setTab(tab) {
+    set({ tab, playing: false });
+    if (tab === 'compare' && !get().comparison)
+      dataSource
+        .loadComparison()
+        .then((comparison) => set({ comparison, window: comparison.window }))
+        .catch((e) => set({ comparisonError: String((e as Error).message ?? e) }));
+  },
+  setWindow: (w) => set({ window: [Math.min(w[0], w[1]), Math.max(w[0], w[1])] }),
 }));
 
 // Handy for debugging / scripted screenshots in dev.

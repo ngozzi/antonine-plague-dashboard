@@ -10,7 +10,7 @@
  * only if the bundle schema itself changes.
  */
 import type { DataSource } from './DataSource';
-import type { Network, ScenarioCatalog } from './types';
+import type { ComparisonData, Network, ScenarioCatalog } from './types';
 
 const BASE = `${import.meta.env.BASE_URL}data/`;
 
@@ -53,6 +53,7 @@ export function createStaticSource(): DataSource {
     name: 'ORBIS simulation bundle',
     loadNetwork: () => json<Network>('network.json'),
     loadScenarios: getCatalog,
+    loadComparison: () => json<ComparisonData>('comparison.json'),
     async loadRun(tag, sheet) {
       const cat = await getCatalog();
       const sc = cat.pathogens.find((p) => p.tag === tag);

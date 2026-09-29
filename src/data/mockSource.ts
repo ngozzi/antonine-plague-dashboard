@@ -5,7 +5,7 @@
  * without the real bundle.
  */
 import type { DataSource } from './DataSource';
-import type { Network, OrbisEdge, OrbisNode, RunData, Scenario, ScenarioCatalog } from './types';
+import type { ComparisonData, Network, OrbisEdge, OrbisNode, RunData, Scenario, ScenarioCatalog } from './types';
 
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -165,5 +165,20 @@ export function createMockSource(): DataSource {
     loadNetwork: async () => network(),
     loadScenarios: async () => makeCatalog(),
     loadRun: async (tag, sheet) => simulate(tag, sheet),
+    loadComparison: async (): Promise<ComparisonData> => {
+      const r = rng(11);
+      const normal = () => Math.sqrt(-2 * Math.log(r() + 1e-12)) * Math.cos(2 * Math.PI * r());
+      const make = (tag: string, label: string, mu: number, sd: number, n: number) => ({
+        tag,
+        label,
+        n_total: 20000,
+        peak_days: Array.from({ length: n }, () => Math.round(mu + sd * normal())).sort((a, b) => a - b),
+      });
+      return {
+        parade_day: 649,
+        window: [663, 729],
+        pathogens: [make('peste', 'Plague', 900, 300, 1500), make('vaiolo', 'Smallpox', 650, 120, 5000), make('morbillo', 'Measles', 500, 90, 5000)],
+      };
+    },
   };
 }

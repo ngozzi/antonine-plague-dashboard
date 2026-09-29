@@ -113,3 +113,20 @@ export interface RunData {
    */
   nodeSeries?: { tDays: Float32Array; I: Float32Array[]; R?: Float32Array[] };
 }
+
+/**
+ * Inputs of the scenario comparison (ABC model selection): the day of the
+ * epidemic peak at Rome for every prior draw that reaches Rome.
+ */
+export interface ComparisonPathogen {
+  tag: PathogenTag;
+  label: string;
+  n_total: number; // all prior draws (incl. those never reaching Rome)
+  peak_days: number[]; // sorted ascending
+}
+
+export interface ComparisonData {
+  parade_day: number; // 12 Oct 166, reference date for the acceptance window
+  window: [number, number]; // default acceptance window [lo, hi] (days)
+  pathogens: ComparisonPathogen[];
+}

@@ -1,4 +1,4 @@
-import type { Network, RunData, ScenarioCatalog } from './types';
+import type { ComparisonData, Network, RunData, ScenarioCatalog } from './types';
 
 /**
  * The single boundary between the app and the data.
@@ -16,4 +16,6 @@ export interface DataSource {
   loadScenarios(): Promise<ScenarioCatalog>;
   /** `sheet` is the row in the pathogen's RunTable. */
   loadRun(tag: string, sheet: number): Promise<RunData>;
+  /** Peak-time-at-Rome of all prior draws, for the scenario comparison view. */
+  loadComparison(): Promise<ComparisonData>;
 }

@@ -6,7 +6,7 @@ const TABS: { id: Tab; label: string; ready: boolean }[] = [
   { id: 'impact', label: 'Demographic impact', ready: false },
   { id: 'arrival', label: 'Arrival times', ready: false },
   { id: 'centrality', label: 'Network centrality', ready: false },
-  { id: 'compare', label: 'Scenario comparison', ready: false },
+  { id: 'compare', label: 'Scenario comparison', ready: true },
 ];
 
 export function Header() {

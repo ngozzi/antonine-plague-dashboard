@@ -45,6 +45,8 @@ SOURCES = {
     "nodes_csv": DATA / "share_mappe/dati_postprocessing/nodi_province_regioni.csv",
     "edges_csv": DATA / "share_mappe/dati_postprocessing/gorbit-edges.csv",
     "abc_meta": DATA / "share/data/meta.json",
+    # ABC prior draws (100k per pathogen): R0, mob, alpha, peak_day at Rome
+    "configs": DATA / "share/data/{tag}_configs.csv.gz",
     "engine_meta": REPO / "final_paper/share_enrichment/dati_preprocessati/meta_{tag}.json",
     "rotte": DATA / "share_mappe/binari/{tag}/rotte.i32",
     "rotte_index": DATA / "share_mappe/binari/{tag}/rotte.i32.index.csv",
@@ -290,6 +292,24 @@ def build_pathogen(tag: str, abc_meta: dict, impact: np.lib.npyio.NpzFile) -> di
     }, meta
 
 
+def build_comparison(abc_meta: dict) -> dict:
+    """Peak-time-at-Rome of every prior draw, for the scenario comparison view
+    (KDE, window acceptance, Bayes factors, posterior model probabilities;
+    same inputs as final_paper/plot1/plot_peak_density.ipynb)."""
+    out = []
+    for tag in PATHOGENS:
+        cfg = pd.read_csv(p("configs", tag))
+        pk = cfg.peak_day.dropna().round().astype(int).sort_values().to_numpy()
+        out.append({"tag": tag, "label": abc_meta["path_en"][tag].capitalize(),
+                    "n_total": int(len(cfg)), "peak_days": pk.tolist()})
+        print(f"  {tag:9s} prior draws={len(cfg):,}  reaching Rome={len(pk):,}")
+    return {
+        "parade_day": 649,  # 12 Oct 166, triumph of Lucius Verus (roma_calendar.PARADE_DAY)
+        "window": [abc_meta["peak_window"]["lo_day"], abc_meta["peak_window"]["hi_day"]],
+        "pathogens": out,
+    }
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     abc_meta = json.loads(SOURCES["abc_meta"].read_text())
@@ -322,6 +342,9 @@ def main() -> None:
         "peak_window": abc_meta["peak_window"],
         "pathogens": scenarios,
     }, separators=(",", ":")))
+
+    print("building comparison …")
+    (OUT / "comparison.json").write_text(json.dumps(build_comparison(abc_meta), separators=(",", ":")))
 
     if p("provinces").exists():
         shutil.copy(p("provinces"), OUT / "provinces.geojson")

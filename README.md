@@ -81,6 +81,18 @@ Select a place: click it on the map or in the tree, search it under *Trace a pla
 
 In about 2% of hops, the infector's own criterion-A arrival comes a few days *after* the place it seeded, because it exported exposed travellers before it counted as invaded itself. These hops are marked `−N d*`.
 
+### Scenario comparison (tab)
+
+This tab asks which pathogen best explains an epidemic that peaks in Rome in late 166 CE. It is the ABC model selection from `final_paper/plot1/plot_peak_density.ipynb`, computed live in the browser (`src/lib/abc.ts`).
+
+- **Input.** The time of the peak at Rome for all 100k prior draws per pathogen (`data/share/data/<tag>_configs.csv.gz`, written by `build_data.py` to `comparison.json`).
+- **Density of peak times per pathogen** (Gaussian KDE with Scott's rule, as in scipy). The shaded area is the draws accepted by the window. The window can be dragged on the chart or set with the paper's presets: from the 12 Oct 166 parade + 1…6 weeks, to 31 Dec 166 / 31 Jan 167 / 28 Feb 167.
+- **Posterior model probabilities** with equal prior odds on the three pathogens.
+- **Bayes factors** with their 95% Monte Carlo CI, on the Jeffreys scale.
+- **Sensitivity grid.** A 6 × 3 grid of windows. Click a cell to select that window.
+
+With the default window (26 Oct – 31 Dec 166) the numbers match the notebook: BF smallpox:measles 9.53, smallpox:plague 17.05, plague:measles 0.56; posteriors 85.9 / 9.0 / 5.0%.
+
 The **Arrival vs distance** panel plots arrival day against geographic distance or against ORBIS travel time from the source, and shows the Spearman ρ for each. Network travel time predicts arrival much better than geographic distance, which is the key point that spread follows connectivity.
 
 The **invasion criterion** (A / B1 / B2) switches between the engine's arrival definitions:

@@ -7,12 +7,14 @@ import { SummaryBar } from './components/SummaryBar';
 import { MapView } from './components/MapView/MapView';
 import { TimelineBar } from './components/TimelineBar';
 import { Charts } from './components/charts/Charts';
+import { ComparisonView } from './components/compare/ComparisonView';
 import { dataSource } from './data';
 import styles from './App.module.css';
 
 export function App() {
   const status = useStore((s) => s.status);
   const error = useStore((s) => s.error);
+  const tab = useStore((s) => s.tab);
   usePlayback();
 
   useEffect(() => {
@@ -32,7 +34,8 @@ export function App() {
           </div>
         </div>
       )}
-      {status === 'ready' && (
+      {status === 'ready' && tab === 'compare' && <ComparisonView />}
+      {status === 'ready' && tab !== 'compare' && (
         <div className={styles.body}>
           <ControlPanel />
           <main className={styles.main}>
