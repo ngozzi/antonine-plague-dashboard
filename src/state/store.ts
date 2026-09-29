@@ -34,6 +34,8 @@ interface State {
   /** an alternative path (e.g. hovered in the across-runs list) drawn on the map */
   previewPath: number[] | null;
   panelOpen: boolean;
+  /** bottom chart row visible (collapsed by default on short screens) */
+  chartsOpen: boolean;
   tab: Tab;
 
   /** scenario comparison: loaded lazily when the tab is first opened */
@@ -56,6 +58,7 @@ interface State {
   setSelected(i: number | null): void;
   setPreviewPath(p: number[] | null): void;
   togglePanel(): void;
+  toggleCharts(): void;
   setTab(t: Tab): void;
   setWindow(w: [number, number]): void;
 }
@@ -64,6 +67,18 @@ export const scenarioOf = (s: Pick<State, 'catalog' | 'pathogen'>): Scenario | u
   s.catalog?.pathogens.find((p) => p.tag === s.pathogen);
 
 let runToken = 0;
+
+// Per-viewer UI preference; storage may be unavailable (private mode etc.).
+const CHARTS_KEY = 'aps.chartsOpen';
+function initialChartsOpen() {
+  try {
+    const v = localStorage.getItem(CHARTS_KEY);
+    if (v !== null) return v === '1';
+  } catch {
+    /* ignore */
+  }
+  return window.innerHeight >= 900;
+}
 
 export const useStore = create<State>((set, get) => ({
   status: 'loading',
@@ -83,6 +98,7 @@ export const useStore = create<State>((set, get) => ({
   selected: null,
   previewPath: null,
   panelOpen: true,
+  chartsOpen: initialChartsOpen(),
   tab: 'spread',
   comparison: null,
   window: [663, 729],
@@ -145,6 +161,15 @@ export const useStore = create<State>((set, get) => ({
   setSelected: (selected) => set({ selected, previewPath: null }),
   setPreviewPath: (previewPath) => set({ previewPath }),
   togglePanel: () => set({ panelOpen: !get().panelOpen }),
+  toggleCharts() {
+    const chartsOpen = !get().chartsOpen;
+    set({ chartsOpen });
+    try {
+      localStorage.setItem(CHARTS_KEY, chartsOpen ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  },
   setTab(tab) {
     set({ tab, playing: false });
     if (tab === 'compare' && !get().comparison)

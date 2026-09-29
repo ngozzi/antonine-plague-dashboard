@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useStore } from '../../state/store';
 import styles from './MapView.module.css';
 
@@ -16,8 +17,16 @@ const Line = ({ color, dash, width = 1.4 }: { color: string; dash?: string; widt
 
 export function MapLegend() {
   const selected = useStore((s) => s.selected);
+  const [open, setOpen] = useState(() => window.innerHeight >= 900);
+  if (!open)
+    return (
+      <button className={`${styles.tool} ${styles.legendPill}`} onClick={() => setOpen(true)} aria-expanded={false}>
+        Legend
+      </button>
+    );
   return (
     <div className={styles.legend} aria-label="Legend">
+      <button className={styles.legendClose} onClick={() => setOpen(false)} aria-label="Hide legend" title="Hide legend">×</button>
       <span className={styles.legendItem}><Dot fill="#68788c" /> Not yet invaded</span>
       <span className={styles.legendItem}><Line color="#788696" /> Road</span>
       <span className={styles.legendItem}><Dot fill="#b22222" ring="#b22222" /> Newly invaded</span>

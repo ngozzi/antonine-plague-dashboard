@@ -36,6 +36,8 @@ export function MapView() {
 
   const ref = useRef<HTMLDivElement>(null);
   const [viewState, setViewState] = useState<MapViewState | null>(null);
+  // Refit on resize (e.g. charts collapsed) until the user pans/zooms.
+  const userMoved = useRef(false);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [provinces, setProvinces] = useState<FeatureCollection | null>(null);
   const [showProvinces, setShowProvinces] = useState(true);
@@ -58,7 +60,7 @@ export function MapView() {
     if (!el) return;
     const ro = new ResizeObserver(() => {
       const { width, height } = el.getBoundingClientRect();
-      if (width > 0 && height > 0) setViewState((v) => v ?? fit(width, height));
+      if (width > 0 && height > 0) setViewState((v) => (v && userMoved.current ? v : fit(width, height)));
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -66,6 +68,7 @@ export function MapView() {
 
   const resetView = () => {
     const el = ref.current;
+    userMoved.current = false;
     if (el) setViewState({ ...fit(el.clientWidth, el.clientHeight), transitionDuration: 500 } as MapViewState);
   };
 
@@ -88,7 +91,10 @@ export function MapView() {
         <DeckGL
           views={view}
           viewState={viewState}
-          onViewStateChange={({ viewState: v }) => setViewState(v as MapViewState)}
+          onViewStateChange={({ viewState: v, interactionState }) => {
+            if (interactionState?.isDragging || interactionState?.isZooming || interactionState?.isPanning) userMoved.current = true;
+            setViewState(v as MapViewState);
+          }}
           controller={{ doubleClickZoom: true, inertia: 250 }}
           layers={layers}
           pickingRadius={6}

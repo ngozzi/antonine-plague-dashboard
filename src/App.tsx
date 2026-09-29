@@ -15,6 +15,7 @@ export function App() {
   const status = useStore((s) => s.status);
   const error = useStore((s) => s.error);
   const tab = useStore((s) => s.tab);
+  const chartsOpen = useStore((s) => s.chartsOpen);
   usePlayback();
 
   useEffect(() => {
@@ -42,9 +43,11 @@ export function App() {
             <SummaryBar />
             <MapView />
             <TimelineBar />
-            <section className={styles.charts}>
-              <Charts />
-            </section>
+            {chartsOpen && (
+              <section className={styles.charts}>
+                <Charts />
+              </section>
+            )}
           </main>
         </div>
       )}

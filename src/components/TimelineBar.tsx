@@ -10,7 +10,8 @@ export function TimelineBar() {
   const t = useStore((s) => s.t);
   const playing = useStore((s) => s.playing);
   const speed = useStore((s) => s.speed);
-  const { toggle, restart, setT, pause, setSpeed } = useStore.getState();
+  const chartsOpen = useStore((s) => s.chartsOpen);
+  const { toggle, restart, setT, pause, setSpeed, toggleCharts } = useStore.getState();
 
   const tEnd = derived?.tEnd ?? 1;
   const pct = (d: number) => `${(d / tEnd) * 100}%`;
@@ -78,6 +79,21 @@ export function TimelineBar() {
           </button>
         ))}
       </div>
+
+      <button
+        className={`${styles.chartsToggle} ${chartsOpen ? styles.on : ''}`}
+        onClick={toggleCharts}
+        aria-expanded={chartsOpen}
+        title={chartsOpen ? 'Hide the charts to enlarge the map' : 'Show the charts below the map'}
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <path d="M2 13h12M4 10V7M8 10V4M12 10V6" />
+        </svg>
+        Charts
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ transform: chartsOpen ? 'rotate(180deg)' : undefined }}>
+          <path d="M2 6.5 5 3.5 8 6.5" />
+        </svg>
+      </button>
     </div>
   );
 }
