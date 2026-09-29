@@ -1,0 +1,146 @@
+.tooltip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  min-width: 220px;
+  max-width: 300px;
+  padding: 10px 12px;
+  background: rgba(251, 249, 245, 0.97);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgba(40, 30, 10, 0.08);
+  font-size: 13px;
+}
+
+.name {
+  font-weight: 600;
+  font-size: 14.5px;
+}
+
+.nameLg {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.sub {
+  color: var(--ink-3);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.state::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--neutral);
+}
+.susceptible,
+.never {
+  color: var(--ink-2);
+}
+.new {
+  color: var(--red);
+}
+.new::before {
+  background: var(--red);
+  box-shadow: 0 0 0 3px var(--red-wash);
+}
+.invaded {
+  color: var(--deep-red);
+}
+.invaded::before {
+  background: var(--deep-red);
+}
+.never::before {
+  background: transparent;
+  border: 1px solid var(--neutral);
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 4px 0 0;
+}
+.dl dt {
+  color: var(--ink-3);
+}
+.dl dd {
+  margin: 0;
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+.details {
+  position: absolute;
+  z-index: 4;
+  top: 54px;
+  right: 12px;
+  width: 330px;
+  max-height: calc(100% - 66px);
+  overflow: auto;
+  padding: 14px 16px 16px;
+  background: rgba(251, 249, 245, 0.97);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(40, 30, 10, 0.1);
+  font-size: 13.5px;
+  animation: in 0.2s var(--ease);
+}
+.details section {
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+.detailsHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.close {
+  border: none;
+  background: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-3);
+  padding: 0 2px;
+}
+.close:hover {
+  color: var(--ink);
+}
+
+.link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 2px;
+}
+.link:hover {
+  text-decoration-color: var(--red);
+}
+
+@keyframes in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

@@ -1,0 +1,71 @@
+/* Design tokens — keep in sync with src/lib/colors.ts */
+:root {
+  --bg: #f7f4ee;
+  --surface: #fbf9f5;
+  --sea: #e4e9eb;
+  --ink: #1a1a1a;
+  --ink-2: #4a4a48;
+  --ink-3: #85827b;
+  --rule: #e2ddd2;
+  --rule-strong: #cfc8b9;
+
+  --neutral: #68788c;
+  --red: #b22222;
+  --deep-red: #80161a;
+  --red-wash: rgba(178, 34, 34, 0.08);
+  --gold: #d4911e;
+
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius: 6px;
+  --panel-w: 300px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}

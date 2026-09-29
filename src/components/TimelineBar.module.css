@@ -1,0 +1,162 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 4px 6px;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.play {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--ink);
+  color: var(--bg);
+  display: grid;
+  place-items: center;
+  transition: transform 0.15s var(--ease), background 0.15s;
+}
+.play:hover {
+  background: var(--deep-red);
+}
+.play:active {
+  transform: scale(0.95);
+}
+
+.icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+  display: grid;
+  place-items: center;
+}
+.icon:hover {
+  color: var(--ink);
+}
+
+.clock {
+  width: 250px;
+  flex: none;
+}
+.date {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+.elapsed {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+
+.track {
+  flex: 1;
+  position: relative;
+  padding-bottom: 18px;
+}
+
+.sliderRoot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  touch-action: none;
+  user-select: none;
+}
+.sliderTrack {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--rule);
+}
+.sliderRange {
+  position: absolute;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--red);
+}
+.sliderThumb {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--red);
+  box-shadow: 0 1px 4px rgba(40, 30, 10, 0.2);
+  cursor: grab;
+}
+.sliderThumb:focus-visible {
+  outline: 2px solid var(--gold);
+}
+
+.ticks {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 24px;
+  height: 14px;
+}
+.tick,
+.rome {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.tick::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  height: 4px;
+  border-left: 1px solid var(--rule-strong);
+}
+.rome {
+  top: -30px;
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+.rome::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 15px;
+  height: 10px;
+  border-left: 1.5px solid var(--ink);
+}
+
+.speed {
+  display: flex;
+  gap: 2px;
+  background: #efebe3;
+  border-radius: var(--radius);
+  padding: 2px;
+}
+.speed button {
+  border: none;
+  background: none;
+  padding: 5px 9px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.speed .on {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(40, 30, 10, 0.12);
+}

@@ -1,0 +1,6 @@
+node_modules
+dist
+*.tsbuildinfo
+.DS_Store
+# raw simulation inputs (large; rebuild public/data with `npm run data`)
+/data/
