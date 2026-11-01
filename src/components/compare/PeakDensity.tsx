@@ -10,7 +10,7 @@ import { colorOf } from './palette';
 import styles from './Compare.module.css';
 
 const X0 = yearStart(165);
-const X1 = yearStart(168) - 1; // 31 Dec 167
+const X1 = yearStart(170) - 1; // 31 Dec 169, as Fig. 1
 const M = { top: 26, right: 170, bottom: 26, left: 96 };
 const MONTH_STARTS = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
 
@@ -83,7 +83,7 @@ export function PeakDensity({
   };
   const onUp = () => (drag.current = null);
 
-  const years = [165, 166, 167];
+  const years = [165, 166, 167, 168, 169];
   const months: number[] = [];
   for (const y of years) for (const m of MONTH_STARTS) months.push(yearStart(y) + m);
   const unit = mode === 'all' ? 'of all draws' : 'of draws reaching Rome';
