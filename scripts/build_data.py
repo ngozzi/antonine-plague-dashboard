@@ -40,23 +40,24 @@ OUT = DASH / "public" / "data"
 # --------------------------------------------------------------------------
 # SOURCES — edit these paths to plug in other ORBIS / simulation files.
 # --------------------------------------------------------------------------
+SEAS = DATA / "seasonal"  # main simulations, built by scripts/prep_seasonal.py
 SOURCES = {
-    "nodes_csv": DATA / "share_mappe/dati_postprocessing/nodi_province_regioni.csv",
-    "edges_csv": DATA / "share_mappe/dati_postprocessing/gorbit-edges.csv",
-    "abc_meta": DATA / "share/data/meta.json",
+    "nodes_csv": SEAS / "nodi_province_regioni.csv",
+    "edges_csv": SEAS / "gorbit-edges.csv",
+    "abc_meta": SEAS / "abc_meta.json",
     # ABC prior draws (100k per pathogen): R0, mob, alpha, peak_day at Rome
-    "configs": DATA / "share/data/{tag}_configs.csv.gz",
-    "engine_meta": REPO / "final_paper/share_enrichment/dati_preprocessati/meta_{tag}.json",
-    "rotte": DATA / "share_mappe/binari/{tag}/rotte.i32",
-    "rotte_index": DATA / "share_mappe/binari/{tag}/rotte.i32.index.csv",
-    "imperial": REPO / "final_paper/share_enrichment/dati_preprocessati/imperial_{tag}.npz",
-    "impact": DATA / "share_impact/data/impact_cache_all.npz",
-    "consensus_nodes": DATA / "share_mappe/dati_postprocessing/{tag}_nodi.csv",
-    "consensus_edges": DATA / "share_mappe/dati_postprocessing/{tag}_archi.csv",
+    "configs": SEAS / "{tag}/configs.csv.gz",
+    "engine_meta": SEAS / "{tag}/meta.json",
+    "rotte": SEAS / "{tag}/rotte.i32",
+    "rotte_index": SEAS / "{tag}/rotte.i32.index.csv",
+    "imperial": SEAS / "{tag}/imperial.npz",
+    "impact": SEAS / "{tag}/impact.npz",
+    "consensus_nodes": SEAS / "{tag}/tree_nodi.csv",
+    "consensus_edges": SEAS / "{tag}/tree_archi.csv",
     "provinces": REPO / "netsci26plot/data/provinces.geojson",
 }
 
-PATHOGENS = ["peste", "vaiolo", "morbillo"]
+PATHOGENS = ["vaiolo", "peste", "morbillo"]
 N_NODES = 677
 SHARD_SIZE = 100
 N_WEEKS = 522  # 10 years of weekly imperial series kept per run
@@ -275,7 +276,7 @@ def frequent_paths(inf_all: np.ndarray, tA_all: np.ndarray, top: int = TOP_PATHS
     return paths, n_reached.tolist()
 
 
-def build_pathogen(tag: str, abc_meta: dict, impact: np.lib.npyio.NpzFile) -> dict:
+def build_pathogen(tag: str, abc_meta: dict) -> dict:
     meta = json.loads(p("engine_meta", tag).read_text())
     idx = pd.read_csv(p("rotte_index", tag))
     rotte = np.fromfile(p("rotte", tag), dtype=np.int32).reshape(-1, 5, N_NODES)
@@ -290,9 +291,10 @@ def build_pathogen(tag: str, abc_meta: dict, impact: np.lib.npyio.NpzFile) -> di
     D = imp["D_cum"][:, :N_WEEKS].astype("<f4")
 
     # Yearly demographic collapse (fraction of initial pop), matched by run_id.
+    impact = np.load(p("impact", tag))
     years = impact["_years"].tolist()
-    calo_pos = {int(r): i for i, r in enumerate(impact[f"{tag}__run_id"])}
-    calo = impact[f"{tag}__calo"]
+    calo_pos = {int(r): i for i, r in enumerate(impact["run_id"])}
+    calo = impact["calo"]
     y171 = years.index(171)
 
     # Time-consistent infector trees (see repair_infectors).
@@ -410,12 +412,11 @@ def build_comparison(abc_meta: dict) -> dict:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     abc_meta = json.loads(SOURCES["abc_meta"].read_text())
-    impact = np.load(SOURCES["impact"], allow_pickle=True)
 
     print("building scenarios …")
     scenarios, metas = [], {}
     for tag in PATHOGENS:
-        sc, meta = build_pathogen(tag, abc_meta, impact)
+        sc, meta = build_pathogen(tag, abc_meta)
         scenarios.append(sc)
         metas[tag] = meta
 

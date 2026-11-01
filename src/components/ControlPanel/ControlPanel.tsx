@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { scenarioOf, useStore } from '../../state/store';
+import { MAIN_PATHOGEN, scenarioOf, useStore } from '../../state/store';
 import type { Criterion } from '../../data/types';
 import { formatDate } from '../../lib/calendar';
 import { fmtNum, fmtPct } from '../../lib/format';
@@ -79,13 +79,22 @@ export function ControlPanel() {
       </div>
 
       <section className={styles.section}>
-        <label className={styles.label}>Pathogen</label>
-        <Segmented
+        <label className={styles.label} htmlFor="pathogen">Pathogen</label>
+        <select
+          id="pathogen"
+          className={styles.pathogenSelect}
           value={pathogen}
-          options={catalog.pathogens.map((p) => ({ id: p.tag, label: p.label }))}
-          onChange={selectPathogen}
-          large
-        />
+          onChange={(e) => selectPathogen(e.target.value)}
+        >
+          {catalog.pathogens.filter((p) => p.tag === MAIN_PATHOGEN).map((p) => (
+            <option key={p.tag} value={p.tag}>{p.label}</option>
+          ))}
+          <optgroup label="Alternative hypotheses">
+            {catalog.pathogens.filter((p) => p.tag !== MAIN_PATHOGEN).map((p) => (
+              <option key={p.tag} value={p.tag}>{p.label}</option>
+            ))}
+          </optgroup>
+        </select>
         <div className={styles.meta}>
           <span>Latent {sc.params.T_e} d</span>
           <span>Infectious {sc.params.T_i} d</span>

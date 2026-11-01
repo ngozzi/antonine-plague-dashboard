@@ -9,7 +9,10 @@ import { dataSource } from '../data';
 import type { ComparisonData, Criterion, Network, RunData, Scenario, ScenarioCatalog } from '../data/types';
 import { deriveRun, seedDistances, type RunDerived, type SeedDistances } from '../lib/epidemic';
 
-export type Tab = 'spread' | 'impact' | 'arrival' | 'centrality' | 'compare';
+/** Main hypothesis: selected at start, listed first in the pathogen menu. */
+export const MAIN_PATHOGEN = 'vaiolo';
+
+export type Tab = 'spread' | 'compare' | 'about';
 
 interface State {
   status: 'loading' | 'ready' | 'error';
@@ -101,12 +104,12 @@ export const useStore = create<State>((set, get) => ({
   chartsOpen: initialChartsOpen(),
   tab: 'spread',
   comparison: null,
-  window: [663, 729],
+  window: [663, 788],
 
   async init() {
     try {
       const [network, catalog] = await Promise.all([dataSource.loadNetwork(), dataSource.loadScenarios()]);
-      const first = catalog.pathogens[0];
+      const first = catalog.pathogens.find((p) => p.tag === MAIN_PATHOGEN) ?? catalog.pathogens[0];
       const seed = first.seed_nodes[0] ?? 0;
       set({ network, catalog, distances: seedDistances(network, seed), status: 'ready' });
       await get().selectPathogen(first.tag);

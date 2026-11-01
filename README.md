@@ -40,11 +40,14 @@ All raw paths are listed in the `SOURCES` dict at the top of `scripts/build_data
 
 | What | Source used now | Bundle output | Read by |
 |---|---|---|---|
-| **ORBIS nodes** (name, lon/lat, population, province) | `data/share_mappe/dati_postprocessing/nodi_province_regioni.csv`, ordered by the `nodes` list in `meta_<tag>.json` | `public/data/network.json` → `nodes` | `staticSource.loadNetwork` |
-| **ORBIS edges** (type, km, days) | `data/share_mappe/dati_postprocessing/gorbit-edges.csv` (directed pairs merged into undirected links, classed as road / river / sea by `EDGE_CLASS`) | `network.json` → `edges` | `staticSource.loadNetwork` |
-| **Invasion times per run** | `data/share_mappe/binari/<tag>/rotte.i32` `[n_run, 5, 677]` + `.index.csv` | `public/data/runs/<tag>/shard_<k>.bin` (layout in `RUN_LAYOUT`) | `staticSource.loadRun` |
-| **Weekly imperial I / deaths** | `final_paper/share_enrichment/dati_preprocessati/imperial_<tag>.npz` | same shards | `staticSource.loadRun` |
-| **Pathogen / scenario metadata** (labels, T_e, T_i, IFR, priors, seed, run parameters, representative runs) | `meta_<tag>.json`, `data/share/data/meta.json`, `rotte.i32.index.csv`, `impact_cache_all.npz`, `<tag>_nodi.csv` | `public/data/scenarios.json` | `staticSource.loadScenarios` |
+| **ORBIS nodes** (name, lon/lat, population, province) | `data/nodi_province_regioni.csv`, ordered by the `nodes` list in the waves `meta.json` | `public/data/network.json` → `nodes` | `staticSource` |
+| **ORBIS edges** (type, km, days) | `data/gorbit-edges.csv` (directed pairs merged into undirected links, classed as road / river / sea by `EDGE_CLASS`) | `network.json` → `edges` | `staticSource` |
+| **Invasion times per run** | `results_rotte_v12{,_ext167}_seas/<tag>/rotte.i32` `[n_run, 5, 677]` + `.index.csv` | `public/data/runs/<tag>/shard_<k>.bin` (layout in `RUN_LAYOUT`) | `staticSource.loadRun` |
+| **Weekly imperial I / deaths, yearly population collapse** | `waves30_100k{,_ext}_seas/<tag>/waves30.f32` | same shards, `scenarios.json` | `staticSource` |
+| **Pathogen / scenario metadata** | waves `meta.json`, `share/data/meta.json`, consensus trees computed from the invasion trees | `scenarios.json` | `staticSource` |
+| **Peak at Rome of all prior draws** | `results_100k_seas/<tag>/` | `comparison.json` | comparison tab |
+
+The data are the main simulations: seasonal sea mobility (`seasonal_mode = 3`), measles T_i = 8 days, runs accepted in the window 26 Oct 166 – 28 Feb 167. `scripts/prep_seasonal.py` builds the inputs in `data/seasonal/` from the simulation folders, which must sit in the parent directory; then `npm run data` builds the bundle.
 
 Notes:
 
@@ -98,7 +101,7 @@ This tab asks which pathogen best explains an epidemic that peaks in Rome in lat
 - **Posterior model probabilities** with equal prior odds on the three pathogens.
 - **Bayes factors** with their 95% Monte Carlo CI, on the Jeffreys scale.
 
-With the default window (26 Oct – 31 Dec 166) the numbers match the notebook: BF smallpox:measles 9.53, smallpox:plague 17.05, plague:measles 0.56; posteriors 85.9 / 9.0 / 5.0%.
+With the default window (26 Oct 166 – 28 Feb 167) the numbers match Fig. 1 of the paper: BF smallpox:measles 88.6, smallpox:plague 15.7, plague:measles 5.6; posteriors 93.0 / 1.1 / 5.9%.
 
 The **Arrival vs distance** panel plots arrival day against geographic distance or against ORBIS travel time from the source, and shows the Spearman ρ for each. Network travel time predicts arrival much better than geographic distance, which is the key point that spread follows connectivity.
 

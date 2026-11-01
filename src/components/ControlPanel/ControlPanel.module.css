@@ -210,3 +210,16 @@
   border-color: var(--ink);
   color: var(--bg);
 }
+
+.pathogenSelect {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+}

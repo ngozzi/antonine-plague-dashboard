@@ -8,6 +8,7 @@ import { MapView } from './components/MapView/MapView';
 import { TimelineBar } from './components/TimelineBar';
 import { Charts } from './components/charts/Charts';
 import { ComparisonView } from './components/compare/ComparisonView';
+import { AboutView } from './components/about/AboutView';
 import { dataSource } from './data';
 import styles from './App.module.css';
 
@@ -36,7 +37,8 @@ export function App() {
         </div>
       )}
       {status === 'ready' && tab === 'compare' && <ComparisonView />}
-      {status === 'ready' && tab !== 'compare' && (
+      {status === 'ready' && tab === 'about' && <AboutView />}
+      {status === 'ready' && tab === 'spread' && (
         <div className={styles.body}>
           <ControlPanel />
           <main className={styles.main}>
